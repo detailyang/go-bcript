@@ -1,0 +1,17 @@
+    [
+        [
+            "OP_PUSHDATA1 1 0x5a",
+            "OP_PUSHDATA1 1 0x5a",
+            90
+        ],
+        [
+            "OP_PUSHDATA2 1 0 0x5a",
+            "OP_PUSHDATA2 1 0 0x5a",
+            90
+        ],
+        [
+            "OP_PUSHDATA4 1 0 0 0 0x5a",
+            "OP_PUSHDATA4 1 0 0 0 0x5a",
+            90
+        ]
+    ]

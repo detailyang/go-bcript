@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 
-	"github.com/tokublock/tokucore/xcrypto/ripemd160"
+	"golang.org/x/crypto/ripemd160"
 )
 
 func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag) error {

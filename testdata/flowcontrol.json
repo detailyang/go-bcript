@@ -1,0 +1,32 @@
+[
+    [
+        "1 OP_IF 3 OP_ENDIF",
+        "1 OP_IF 3 OP_ENDIF",
+        3
+    ],
+    [
+        "1 OP_IF 100 OP_ENDIF",
+        "1 OP_IF 100 OP_ENDIF",
+        100
+    ],
+    [
+        "1 OP_IF 200 OP_ENDIF",
+        "1 OP_IF 200 OP_ENDIF",
+        200
+    ],
+    [
+        "0 OP_NOTIF 100 OP_ENDIF",
+        "0 OP_NOTIF 100 OP_ENDIF",
+        100
+    ],
+    [
+        "0 OP_NOTIF 33 OP_ENDIF",
+        "0 OP_NOTIF 33 OP_ENDIF",
+        33
+    ],
+    [
+        "0 OP_NOTIF 0 OP_ENDIF",
+        "0 OP_NOTIF 0 OP_ENDIF",
+        0
+    ]
+]

@@ -116,12 +116,12 @@ var instructionOperator = map[OPCode]Operator{
 	// control
 	OP_NOP:      instructionRESERVED,
 	OP_VER:      instructionRESERVED,
-	OP_IF:       instructionRESERVED,
-	OP_NOTIF:    instructionRESERVED,
+	OP_IF:       instructionIF,
+	OP_NOTIF:    instructionIF,
 	OP_VERIF:    instructionRESERVED,
 	OP_VERNOTIF: instructionRESERVED,
-	OP_ELSE:     instructionRESERVED,
-	OP_ENDIF:    instructionRESERVED,
+	OP_ELSE:     instructionELSE,
+	OP_ENDIF:    instructionENDIF,
 	OP_VERIFY:   instructionVERIFY,
 	OP_RETURN:   instructionRESERVED,
 
@@ -143,7 +143,7 @@ var instructionOperator = map[OPCode]Operator{
 	OP_PICK:         instructionROLL,
 	OP_ROLL:         instructionROLL,
 	OP_ROT:          instructionROT,
-	OP_SWAP:         instruction2SWAP,
+	OP_SWAP:         instructionSWAP,
 	OP_TUCK:         instructionTUCK,
 
 	// splice ops

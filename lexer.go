@@ -109,7 +109,7 @@ func (l *Lexer) scanOPCode() (*Token, error) {
 			break
 		}
 
-		if !('A' <= ch && ch <= 'Z' || ('0' <= ch && ch <= '9')) {
+		if !('_' == ch || 'A' <= ch && ch <= 'Z' || ('0' <= ch && ch <= '9')) {
 			break
 		}
 	}

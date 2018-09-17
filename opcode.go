@@ -1,9 +1,13 @@
 package bscript
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
-	ErrOPCodeUnknow = errors.New("opcode: unknow")
+	ErrOPCodeUnknow           = errors.New("opcode: unknow")
+	ErrOPCodePushSizeTooLarge = errors.New("opcode: push size too large")
+	ErrOPCodeNotPush          = errors.New("opcode: is not push")
 )
 
 type OPCode uint8
@@ -219,6 +223,8 @@ var (
 
 func NewOPCodeFromString(s string) (OPCode, error) {
 	switch s {
+	case "OP_FALSE":
+		fallthrough
 	case "OP_0":
 		return OP_0, nil
 	case "OP_PUSHBYTES_1":
@@ -381,6 +387,8 @@ func NewOPCodeFromString(s string) (OPCode, error) {
 		return OP_1NEGATE, nil
 	case "OP_RESERVED":
 		return OP_RESERVED, nil
+	case "OP_TRUE":
+		fallthrough
 	case "OP_1":
 		return OP_1, nil
 	case "OP_2":

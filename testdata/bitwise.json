@@ -1,0 +1,42 @@
+[
+    [
+        "OP_AND",
+        "1 2 OP_AND",
+        0
+    ],
+    [
+        "OP_AND",
+        "1 3 OP_AND",
+        1
+    ],
+    [
+        "OP_OR",
+        "0x01 3 OP_OR",
+        3
+    ],
+    [
+        "OP_OR",
+        "0x00 3 OP_OR",
+        3
+    ],
+    [
+        "OP_XOR",
+        "3 3 OP_XOR",
+        0
+    ],
+    [
+        "OP_XOR",
+        "0x00 3 OP_XOR",
+        3
+    ],
+    [
+        "OP_EQUAL",
+        "0x00 3 OP_EQUAL",
+        0
+    ],
+    [
+        "OP_EQUAL",
+        "0x03 3 OP_EQUAL",
+        1
+    ]
+]

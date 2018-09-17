@@ -1,6 +1,8 @@
 package bscript
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrInterpreterScriptSize            = errors.New("intrepreter: over script size 1000")
@@ -12,6 +14,7 @@ var (
 	ErrInterpreterModZero               = errors.New("interpreter: mod zero")
 	ErrInterpreterBadInstruction        = errors.New("intrepreter: bad instruction")
 	ErrInterpreterStackSizeNotEnough    = errors.New("intrepreter: stack not enough")
+	ErrInterpreterNoMatchConditional    = errors.New("interpreter: no match conditional")
 	ErrIntrepreterBadOPCode             = errors.New("intrepreter: bad opcode")
 	ErrIntrepreterStackOverflow         = errors.New("intrepreter: data stack overflow")
 	ErrInterpreterUnbalancedConditional = errors.New("interpreter: unbalanced conditional")
@@ -98,4 +101,12 @@ func (i *Interpreter) Eval(script *Script, flag Flag) error {
 	}
 
 	return nil
+}
+
+func (i *Interpreter) shouldSkip() bool {
+	if len(i.cstack) == 0 {
+		return false
+	}
+
+	return i.cstack[len(i.cstack)-1] != OpCondTrue
 }

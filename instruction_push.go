@@ -7,12 +7,11 @@ func instructionPushOPN(i *Interpreter, ins *Instruction, flag Flag) error {
 }
 
 func instructionPushOP0(i *Interpreter, ins *Instruction, flag Flag) error {
-	i.dstack.Push(Number(0).Bytes())
+	i.dstack.Push([]byte{})
 	return nil
 }
 
 func instructionPushOPBytes(i *Interpreter, ins *Instruction, flag Flag) error {
-	data := ins.Data
-	i.dstack.Push(data)
+	i.dstack.Push(ins.Data)
 	return nil
 }

@@ -1,0 +1,182 @@
+[
+    [
+        "OP_1ADD",
+        "1 OP_1ADD",
+        2
+    ],
+    [
+        "OP_1SUB",
+        "1 OP_1SUB",
+        0
+    ],
+    [
+        "OP_NEGATE",
+        "1 OP_NEGATE",
+        -1
+    ],
+    [
+        "OP_ABS",
+        "-10 OP_ABS",
+        10
+    ],
+    [
+        "OP_NOT",
+        "-10 OP_NOT",
+        0
+    ],
+    [
+        "OP_NOT",
+        "1 OP_NOT",
+        0
+    ],
+    [
+        "OP_NOT",
+        "0 OP_NOT",
+        1
+    ],
+    [
+        "OP_0NOTEQUAL",
+        "-20 OP_0NOTEQUAL",
+        1
+    ],
+    [
+        "OP_0NOTEQUAL",
+        "0 OP_0NOTEQUAL",
+        0
+    ],
+    [
+        "op_add",
+        "1 2 OP_ADD 3 OP_ADD 4 OP_ADD 5 OP_ADD 10 OP_ADD",
+        25
+    ],
+    [
+        "op_sub",
+        "1 2 OP_SUB 3 OP_SUB 4 OP_SUB 5 OP_SUB 10 OP_SUB",
+        -23
+    ],
+    [
+        "op_mul",
+        "1 2 OP_MUL 3 OP_MUL 4 OP_MUL 5 OP_MUL 10 OP_MUL",
+        1200
+    ],
+    [
+        "op_div",
+        "100 3 OP_DIV 3 OP_DIV",
+        11
+    ],
+    [
+        "op_mod",
+        "100 3 OP_MOD 2 OP_MOD",
+        1
+    ],
+    [
+        "op_booland",
+        "1 2 OP_BOOLAND",
+        1
+    ],
+    [
+        "op_booland",
+        "103 55 OP_BOOLAND",
+        1
+    ],
+    [
+        "op_booland",
+        "0 55 OP_BOOLAND",
+        0
+    ],
+    [
+        "op_boolor",
+        "103 55 OP_BOOLOR",
+        1
+    ],
+    [
+        "op_boolor",
+        "0 0 OP_BOOLOR",
+        0
+    ],
+    [
+        "op_boolor",
+        "0 55 OP_BOOLOR",
+        1
+    ],
+    [
+        "OP_NUMEQUAL",
+        "103 103 OP_NUMEQUAL",
+        1
+    ],
+    [
+        "OP_NUMEQUAL",
+        "103 10 OP_NUMEQUAL",
+        0
+    ],
+    [
+        "OP_NUMNOTEQUAL",
+        "103 10 OP_NUMNOTEQUAL",
+        1
+    ],
+    [
+        "OP_NUMNOTEQUAL",
+        "103 103 OP_NUMNOTEQUAL",
+        0
+    ],
+    [
+        "OP_LESSTHAN",
+        "103 10 OP_LESSTHAN",
+        0
+    ],
+    [
+        "OP_GREATERTHAN",
+        "103 10 OP_GREATERTHAN",
+        1
+    ],
+    [
+        "OP_LESSTHANOREQUAL",
+        "103 103 OP_LESSTHANOREQUAL",
+        1
+    ],
+    [
+        "OP_LESSTHANOREQUAL",
+        "101 102 OP_LESSTHANOREQUAL",
+        1
+    ],
+    [
+        "OP_LESSTHANOREQUAL",
+        "103 102 OP_LESSTHANOREQUAL",
+        0
+    ],
+    [
+        "OP_GREATERTHANOREQUAL",
+        "103 103 OP_GREATERTHANOREQUAL",
+        1
+    ],
+    [
+        "OP_GREATERTHANOREQUAL",
+        "101 102 OP_GREATERTHANOREQUAL",
+        0
+    ],
+    [
+        "OP_GREATERTHANOREQUAL",
+        "103 102 OP_GREATERTHANOREQUAL",
+        1
+    ],
+    [
+        "OP_MIN",
+        "103 102 OP_MIN",
+        102
+    ],
+    [
+        "OP_MAX",
+        "103 102 OP_MAX",
+        103
+    ],
+    [
+        "OP_WITHIN",
+        "1 103 102 OP_WITHIN",
+        0
+    ],
+    [
+        "OP_WITHIN",
+        "101 101 103 OP_WITHIN",
+        1
+    ]
+]

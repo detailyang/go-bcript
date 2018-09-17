@@ -25,9 +25,9 @@ const (
 // arithmetic is done or the result is interpreted as an integer.
 type Number int64
 
-func NewNumber(d []byte) (Number, error) {
+func NewNumber(d []byte) Number {
 	if len(d) == 0 {
-		return 0, nil
+		return 0
 	}
 
 	var rv int64
@@ -40,10 +40,10 @@ func NewNumber(d []byte) (Number, error) {
 		// above, so uint8 is enough to cover the max possible shift
 		// value of 24.
 		rv &= ^(int64(0x80) << uint8(8*(len(d)-1)))
-		return Number(-rv), nil
+		return Number(-rv)
 	}
 
-	return Number(rv), nil
+	return Number(rv)
 }
 
 func NewNumberFromBytes(d []byte, required bool, limit int) (Number, error) {
@@ -55,7 +55,7 @@ func NewNumberFromBytes(d []byte, required bool, limit int) (Number, error) {
 		return 0, ErrNumberNonMinimalEncode
 	}
 
-	return NewNumber(d)
+	return NewNumber(d), nil
 }
 
 func (n Number) IsNegative() bool {

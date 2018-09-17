@@ -1,0 +1,52 @@
+[
+    [
+        "OP_0 OP_RIPEMD160",
+        "OP_0 OP_RIPEMD160",
+        "0x9c1185a5c5e9fc54612808977ee8f548b2258d31"
+    ],
+    [
+        "-10 OP_RIPEMD160",
+        "-10 OP_RIPEMD160",
+        "0x212b62701b628b0757f8254688fd2abef813291b"
+    ],
+    [
+        "OP_0 OP_SHA1",
+        "OP_0 OP_SHA1",
+        "0xda39a3ee5e6b4b0d3255bfef95601890afd80709"
+    ],
+    [
+        "-10 OP_SHA1",
+        "-10 OP_SHA1",
+        "0xc4488af0c158e8c2832cb927cfb3ce534104cd1e"
+    ],
+    [
+        "OP_0 OP_SHA256",
+        "OP_0 OP_SHA256",
+        "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    ],
+    [
+        "-10 OP_SHA256",
+        "-10 OP_SHA256",
+        "0x2d3193691934124461809fb9bc7e671215099fc7d961bfbe31943d40d477c890"
+    ],
+    [
+        "OP_0 OP_HASH160",
+        "OP_0 OP_HASH160",
+        "0xb472a266d0bd89c13706a4132ccfb16f7c3b9fcb"
+    ],
+    [
+        "-10 OP_HASH160",
+        "-10 OP_HASH160",
+        "0x653cd697001f762511e397c35278ba49e808b904"
+    ],
+    [
+        "OP_0 OP_HASH256",
+        "OP_0 OP_HASH256",
+        "0x5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456"
+    ],
+    [
+        "-10 OP_HASH256",
+        "-10 OP_HASH256",
+        "0x008e4b1bc46816e45630762951826f71ebd045389504d9c77cfe4395add86007"
+    ]
+]
