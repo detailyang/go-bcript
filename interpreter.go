@@ -23,8 +23,8 @@ const (
 )
 
 type Interpreter struct {
-	dstack  *stack
-	astack  *stack
+	dstack  *Stack
+	astack  *Stack
 	cstack  []int
 	pc      int
 	codesep int
