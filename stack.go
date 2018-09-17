@@ -14,12 +14,12 @@ var (
 // When used as numbers, byte vectors are interpreted as little-endian variable-length integers with the most significant bit determining the sign of the integer. Thus 0x81 represents -1. 0x80 is another representation of zero (so called negative 0). Positive 0 is represented by a null-length vector.
 // Byte vectors are interpreted as Booleans where False is represented by any representation of zero and True is represented by any representation of non-zero.
 type Stack struct {
-	data []valtype
+	data []StackElemnt
 }
 
 func NewStack() *Stack {
 	return &Stack{
-		data: make([]valtype, 0, 1024),
+		data: make([]StackElemnt, 0, 1024),
 	}
 }
 
@@ -33,7 +33,7 @@ func (s *Stack) Combine(ns *Stack) {
 	s.data = append(s.data, ns.data...)
 }
 
-func (s *Stack) Push(data valtype) {
+func (s *Stack) Push(data StackElemnt) {
 	s.data = append(s.data, data)
 }
 
@@ -58,7 +58,7 @@ func (s *Stack) Swap(i, j int) error {
 	return nil
 }
 
-func (s *Stack) Replace(n int, data valtype) error {
+func (s *Stack) Replace(n int, data StackElemnt) error {
 	depth := len(s.data)
 	if n > 0 {
 		if n >= depth {
@@ -104,7 +104,7 @@ func (s *Stack) Remove(n int) error {
 	return nil
 }
 
-func (s *Stack) InsertBefore(n int, data valtype) error {
+func (s *Stack) InsertBefore(n int, data StackElemnt) error {
 	depth := len(s.data)
 	if n > 0 {
 		if n >= depth {
@@ -112,20 +112,20 @@ func (s *Stack) InsertBefore(n int, data valtype) error {
 		}
 
 		behind := s.data[n:]
-		s.data = append(append([]valtype{data}, s.data[:n]...), behind...)
+		s.data = append(append([]StackElemnt{data}, s.data[:n]...), behind...)
 	} else {
 		if -n >= depth {
 			return ErrStackNotEnough
 		}
 
 		behind := s.data[depth+n:]
-		s.data = append(append([]valtype{data}, s.data[:depth+n]...), behind...)
+		s.data = append(append([]StackElemnt{data}, s.data[:depth+n]...), behind...)
 	}
 
 	return nil
 }
 
-func (s *Stack) InsertAfter(n int, data valtype) error {
+func (s *Stack) InsertAfter(n int, data StackElemnt) error {
 	depth := len(s.data)
 	if n > 0 {
 		if n >= depth {
@@ -146,7 +146,7 @@ func (s *Stack) InsertAfter(n int, data valtype) error {
 	return nil
 }
 
-func (s *Stack) Pop() (valtype, error) {
+func (s *Stack) Pop() (StackElemnt, error) {
 	if len(s.data) > 0 {
 		data := s.data[len(s.data)-1]
 		s.data = s.data[:len(s.data)-1]
@@ -156,7 +156,7 @@ func (s *Stack) Pop() (valtype, error) {
 	return nil, ErrStackEmpty
 }
 
-func (s *Stack) Peek(n int) (valtype, error) {
+func (s *Stack) Peek(n int) (StackElemnt, error) {
 	depth := s.Depth()
 	if n >= 0 {
 		if n >= depth {

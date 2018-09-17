@@ -5,52 +5,52 @@ import (
 	"math/bits"
 )
 
-type valtype []byte
+type StackElemnt []byte
 
-func (v valtype) Cat(n valtype) {
+func (v StackElemnt) Cat(n StackElemnt) {
 	v = append(v, n...)
 }
 
-func (v valtype) Invert() {
+func (v StackElemnt) Invert() {
 	for i := range v {
 		v[i] = bits.Reverse8(v[i])
 	}
 }
 
-func (v valtype) Equal(n valtype) bool {
+func (v StackElemnt) Equal(n StackElemnt) bool {
 	return bytes.Equal([]byte(v), []byte(n))
 }
 
-func (v valtype) BitXor(n valtype) {
+func (v StackElemnt) BitXor(n StackElemnt) {
 	for i := range v {
 		v[i] ^= n[i]
 	}
 }
 
-func (v valtype) BitOr(n valtype) {
+func (v StackElemnt) BitOr(n StackElemnt) {
 	for i := range v {
 		v[i] |= n[i]
 	}
 }
 
-func (v valtype) BitAnd(n valtype) {
+func (v StackElemnt) BitAnd(n StackElemnt) {
 	for i := range v {
 		v[i] &= n[i]
 	}
 }
 
-func (v valtype) Bytes() []byte {
+func (v StackElemnt) Bytes() []byte {
 	return v
 }
 
-func (v valtype) ToNumber(required bool, limit int) (Number, error) {
+func (v StackElemnt) ToNumber(required bool, limit int) (Number, error) {
 	return NewNumberFromBytes(v.Bytes(), required, limit)
 }
 
-func (v valtype) ToBoolean() Boolean {
+func (v StackElemnt) ToBoolean() Boolean {
 	return NewBoolean(v.Bytes())
 }
 
-func (v valtype) Size() int {
+func (v StackElemnt) Size() int {
 	return len(v)
 }

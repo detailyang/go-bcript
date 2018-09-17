@@ -17,7 +17,7 @@ func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag) error {
 	hasher.Write(d.Bytes())
 	hash := hasher.Sum(nil)
 
-	i.dstack.Push(valtype(hash))
+	i.dstack.Push(hash)
 
 	return nil
 }
@@ -32,7 +32,7 @@ func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag) error {
 	hasher.Write(d.Bytes())
 	hash := hasher.Sum(nil)
 
-	i.dstack.Push(valtype(hash))
+	i.dstack.Push(hash)
 
 	return nil
 }
@@ -44,7 +44,7 @@ func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag) error {
 	}
 
 	hash := sha256.Sum256(d.Bytes())
-	i.dstack.Push(valtype(hash[:]))
+	i.dstack.Push(hash[:])
 
 	return nil
 }
@@ -58,7 +58,7 @@ func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag) error {
 	hash := sha256.Sum256(d.Bytes())
 	hasher := ripemd160.New()
 	hasher.Write(hash[:])
-	i.dstack.Push(valtype(hasher.Sum(nil)))
+	i.dstack.Push(hasher.Sum(nil))
 
 	return nil
 }
@@ -71,7 +71,7 @@ func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag) error {
 
 	hash := sha256.Sum256(d.Bytes())
 	hash = sha256.Sum256(hash[:])
-	i.dstack.Push(valtype(hash[:]))
+	i.dstack.Push(hash[:])
 
 	return nil
 }
