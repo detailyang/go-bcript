@@ -15,6 +15,7 @@ var (
 	ErrIntrepreterBadOPCode             = errors.New("intrepreter: bad opcode")
 	ErrIntrepreterStackOverflow         = errors.New("intrepreter: data stack overflow")
 	ErrInterpreterUnbalancedConditional = errors.New("interpreter: unbalanced conditional")
+	ErrIntrepreterDisabledOPCode        = errors.New("interpreter: disabled opcode")
 )
 
 const (
@@ -66,7 +67,9 @@ func (i *Interpreter) Eval(script *Script, flag Flag) error {
 			}
 		}
 
-		// Check disabled
+		if !flag.Has(ScriptSkipDisabledOPCode) && opcode.IsDisabled() {
+			return ErrIntrepreterDisabledOPCode
+		}
 
 		operator, ok := instructionOperator[opcode]
 		if !ok {

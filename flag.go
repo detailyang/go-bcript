@@ -7,6 +7,9 @@ const (
 	// pay-to-script hash transactions will be fully validated.
 	ScriptBip16 Flag = 1 << iota
 
+	// ScriptSkipDisabledOPCode allows vm to execute all opcode
+	ScriptSkipDisabledOPCode
+
 	// ScriptStrictMultiSig defines whether to verify the stack item
 	// used by CHECKMULTISIG is zero length.
 	ScriptStrictMultiSig

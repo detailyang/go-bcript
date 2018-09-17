@@ -1,6 +1,20 @@
 package bscript
 
 func instructionCAT(i *Interpreter, ins *Instruction, flag Flag) error {
+	d1, err := i.dstack.Peek(-2)
+	if err != nil {
+		return err
+	}
+
+	d2, err := i.dstack.Peek(-1)
+	if err != nil {
+		return err
+	}
+
+	d1.Cat(d2)
+
+	i.dstack.Pop()
+
 	return nil
 }
 
@@ -17,5 +31,12 @@ func instructionRIGHT(i *Interpreter, ins *Instruction, flag Flag) error {
 }
 
 func instructionSIZE(i *Interpreter, ins *Instruction, flag Flag) error {
+	d, err := i.dstack.Peek(-1)
+	if err != nil {
+		return err
+	}
+
+	i.dstack.Push(Number(d.Size()).Bytes())
+
 	return nil
 }
