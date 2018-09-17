@@ -206,10 +206,8 @@ func (l *Lexer) scanNumber(neg bool) (*Token, error) {
 		return nil, err
 	}
 
-	value := Number(num).Bytes()
-
 	return &Token{
-		value: value,
+		value: num,
 		raw:   numstr,
 		kind:  TOKEN_NUMBER,
 	}, nil

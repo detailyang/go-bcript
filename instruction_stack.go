@@ -118,7 +118,7 @@ func instructionIFDUP(i *Interpreter, ins *Instruction, flag Flag) error {
 		return err
 	}
 
-	b := d.ToBoolean()
+	b := d.Boolean()
 	if b {
 		i.dstack.Push(d)
 	}

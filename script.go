@@ -3,6 +3,7 @@ package bscript
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 )
 
 var (
@@ -56,7 +57,15 @@ func NewScriptFromString(src string) (*Script, error) {
 			if !ok {
 				return nil, ErrScriptBadTypeCast
 			}
-			script.AddInt64(value)
+
+			if value <= math.MaxInt8 {
+				script.AddInt8(int8(value))
+			} else if value <= math.MaxInt32 {
+				script.AddInt32(int32(value))
+			} else {
+				script.AddInt64(int64(value))
+			}
+
 		case TOKEN_HEXSTRING:
 			value, ok := tok.value.([]byte)
 			if !ok {
@@ -72,11 +81,11 @@ func NewScriptFromString(src string) (*Script, error) {
 func (s *Script) AddBytes(b []byte) *Script {
 	n := len(b)
 	switch {
-	case n < 2^8:
+	case n <= math.MaxInt8:
 		s.AddOPCode(OP_PUSHDATA1)
-	case n < 2^16:
+	case n <= math.MaxInt16:
 		s.AddOPCode(OP_PUSHDATA2)
-	case n < 2^32:
+	case n <= math.MaxInt64:
 		s.AddOPCode(OP_PUSHDATA4)
 	default:
 		panic("too many bytes")
@@ -92,9 +101,28 @@ func (s *Script) AddOPCode(opcode OPCode) *Script {
 	return s
 }
 
+func (s *Script) AddInt8(n int8) *Script {
+	s.AddOPCode(OP_PUSHBYTES_1)
+	s.Data = append(s.Data, byte(n))
+
+	return s
+}
+
+func (s *Script) AddInt32(n int32) *Script {
+	s.AddOPCode(OP_PUSHBYTES_4)
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, uint32(n))
+	s.Data = append(s.Data, buf...)
+
+	return s
+}
+
 func (s *Script) AddInt64(n int64) *Script {
 	s.AddOPCode(OP_PUSHBYTES_8)
-	binary.LittleEndian.PutUint64(s.Data, uint64(n))
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(n))
+	s.Data = append(s.Data, buf...)
+
 	return s
 }
 

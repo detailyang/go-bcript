@@ -41,6 +41,14 @@ func NewInterpreter() *Interpreter {
 	}
 }
 
+func (i *Interpreter) SetDStack(dstack *Stack) {
+	i.dstack = dstack
+}
+
+func (i *Interpreter) GetDStack() *Stack {
+	return i.dstack
+}
+
 func (i *Interpreter) Eval(script *Script, flag Flag) error {
 	if script.Size() > MaxIntrepreterScriptSize {
 		return ErrInterpreterScriptSize

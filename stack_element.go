@@ -43,11 +43,11 @@ func (v StackElemnt) Bytes() []byte {
 	return v
 }
 
-func (v StackElemnt) ToNumber(required bool, limit int) (Number, error) {
+func (v StackElemnt) Number(required bool, limit int) (Number, error) {
 	return NewNumberFromBytes(v.Bytes(), required, limit)
 }
 
-func (v StackElemnt) ToBoolean() Boolean {
+func (v StackElemnt) Boolean() Boolean {
 	return NewBoolean(v.Bytes())
 }
 
