@@ -15,6 +15,7 @@ var (
 	ErrLexerNotHexString     = errors.New("lexer: not hex string")
 	ErrLexerUnknowOPCode     = errors.New("lexer: unknow opcode")
 	ErrLexerNumberOverFlow   = errors.New("lexer: overflow int64")
+	ErrLexerNotValidNumber   = errors.New("lexer: not valid number")
 )
 
 const (
@@ -196,6 +197,9 @@ func (l *Lexer) scanNumber(neg bool) (*Token, error) {
 		}
 
 		if !('0' <= ch && ch <= '9') {
+			if ch != ' ' {
+				return nil, ErrLexerNotValidNumber
+			}
 			break
 		}
 	}

@@ -1,6 +1,11 @@
 package bscript
 
-import "errors"
+import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"strings"
+)
 
 var (
 	ErrInstructionReserved = errors.New("instruction: reserved")
@@ -10,6 +15,34 @@ type Instruction struct {
 	OPCode OPCode
 	Step   int
 	Data   []byte
+}
+
+func (ins *Instruction) String() string {
+	rv := make([]string, 0, 36)
+	rv = append(rv, fmt.Sprintf("%-16s", ins.OPCode))
+
+	switch ins.OPCode {
+	case OP_PUSHDATA1:
+		rv = append(rv, fmt.Sprintf("0x%02x", len(ins.Data)))
+	case OP_PUSHDATA2:
+		buf := make([]byte, 2)
+		binary.LittleEndian.PutUint16(buf, uint16(len(ins.Data)))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[0]))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[1]))
+	case OP_PUSHDATA4:
+		buf := make([]byte, 4)
+		binary.LittleEndian.PutUint32(buf, uint32(len(ins.Data)))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[0]))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[1]))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[2]))
+		rv = append(rv, fmt.Sprintf("0x%02x", buf[3]))
+	}
+
+	for i := 0; i < len(ins.Data); i++ {
+		rv = append(rv, fmt.Sprintf("0x%02x", ins.Data[i]))
+	}
+
+	return strings.Join(rv, " ")
 }
 
 type Operator func(i *Interpreter, ins *Instruction, flag Flag) error
