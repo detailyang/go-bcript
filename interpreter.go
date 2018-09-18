@@ -106,7 +106,7 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 		}
 
 		if i.shouldSkip() && !ins.IsConditional() {
-			return nil
+			continue
 		}
 
 		operator, ok := instructionOperator[opcode]

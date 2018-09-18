@@ -5,6 +5,11 @@
         3
     ],
     [
+        "0 OP_IF 3 OP_ELSE 1 OP_ENDIF",
+        "0 OP_IF 3 OP_ELSE 1 OP_ENDIF",
+        1
+    ],
+    [
         "1 OP_IF 100 OP_ENDIF",
         "1 OP_IF 100 OP_ENDIF",
         100
