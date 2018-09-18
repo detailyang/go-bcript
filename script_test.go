@@ -7,10 +7,7 @@ import (
 )
 
 func TestScript(t *testing.T) {
-	script, err := NewScriptFromBytes([]byte{0x02, 0x10, 0x00})
-	if err != nil {
-		t.Fatal(err)
-	}
+	script := NewScriptFromBytes([]byte{0x02, 0x10, 0x00})
 
 	for {
 		ins, err := script.Next()
@@ -38,10 +35,7 @@ func TestScriptFromBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	script, err := NewScriptFromBytes(b)
-	if err != nil {
-		t.Fatal(err)
-	}
+	script := NewScriptFromBytes(b)
 
 	instructions := make([]*Instruction, 0)
 	for {

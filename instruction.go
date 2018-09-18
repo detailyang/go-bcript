@@ -45,7 +45,7 @@ func (ins *Instruction) String() string {
 	return strings.Join(rv, " ")
 }
 
-type Operator func(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error
+type Operator func(*InterpreterContext) error
 
 var instructionOperator = map[OPCode]Operator{
 	OP_0:            instructionPushOP0,
@@ -235,7 +235,7 @@ var instructionOperator = map[OPCode]Operator{
 	OP_HASH256:             instructionHASH256,
 	OP_CODESEPARATOR:       instructionCODESEPARATOR,
 	OP_CHECKSIG:            instructionCHECKSIG,
-	OP_CHECKSIGVERIFY:      instructionCHECKSIGVERIFY,
+	OP_CHECKSIGVERIFY:      instructionCHECKSIG,
 	OP_CHECKMULTISIG:       instructionCHECKMULTISIG,
 	OP_CHECKMULTISIGVERIFY: instructionCHECKMULTISIGVERIFY,
 
@@ -255,6 +255,6 @@ var instructionOperator = map[OPCode]Operator{
 	OP_NOP10: instructionRESERVED,
 }
 
-func instructionRESERVED(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionRESERVED(ctx *InterpreterContext) error {
 	return ErrInstructionReserved
 }

@@ -1,6 +1,7 @@
 package bscript
 
-func instructionEQUAL(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionEQUAL(ctx *InterpreterContext) error {
+	i := ctx.i
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -22,7 +23,8 @@ func instructionEQUAL(i *Interpreter, ins *Instruction, flag Flag, checker Check
 	return nil
 }
 
-func instructionINVERT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionINVERT(ctx *InterpreterContext) error {
+	i := ctx.i
 	d, err := i.dstack.Peek(-1)
 	if err != nil {
 		return err
@@ -33,7 +35,9 @@ func instructionINVERT(i *Interpreter, ins *Instruction, flag Flag, checker Chec
 	return nil
 }
 
-func instructionBITOP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionBITOP(ctx *InterpreterContext) error {
+	i := ctx.i
+	ins := ctx.ins
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -61,15 +65,18 @@ func instructionBITOP(i *Interpreter, ins *Instruction, flag Flag, checker Check
 	return nil
 }
 
-func instructionEQUALVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
-	if err := instructionEQUAL(i, ins, flag, checker); err != nil {
+func instructionEQUALVERIFY(ctx *InterpreterContext) error {
+	if err := instructionEQUAL(ctx); err != nil {
 		return err
 	}
 
-	return instructionVERIFY(i, ins, flag, checker)
+	return instructionVERIFY(ctx)
 }
 
-func instructionSFHIT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionSFHIT(ctx *InterpreterContext) error {
+	i := ctx.i
+	ins := ctx.ins
+	flag := ctx.flag
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err

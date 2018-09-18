@@ -37,6 +37,26 @@ type Interpreter struct {
 	codesep int
 }
 
+type InterpreterContext struct {
+	sigver  SignatureVersion
+	flag    Flag
+	script  *Script
+	i       *Interpreter
+	ins     *Instruction
+	checker Checker
+}
+
+func NewInterpreterContext(script *Script, i *Interpreter, ins *Instruction, checker Checker, flag Flag, sigver SignatureVersion) *InterpreterContext {
+	return &InterpreterContext{
+		sigver:  sigver,
+		flag:    flag,
+		script:  script,
+		i:       i,
+		ins:     ins,
+		checker: checker,
+	}
+}
+
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
 		dstack:  NewStack(),
@@ -55,7 +75,7 @@ func (i *Interpreter) GetDStack() *Stack {
 	return i.dstack
 }
 
-func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker) error {
+func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversion SignatureVersion) error {
 	if script.Size() > MaxIntrepreterScriptSize {
 		return ErrInterpreterScriptSize
 	}
@@ -90,7 +110,8 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker) error {
 			return ErrIntrepreterBadOPCode
 		}
 
-		if err := operator(i, ins, flag, checker); err != nil {
+		ctx := NewInterpreterContext(script, i, ins, checker, flag, sigversion)
+		if err := operator(ctx); err != nil {
 			return err
 		}
 

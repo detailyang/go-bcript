@@ -7,8 +7,8 @@ const (
 	OpCondSkip  = 2
 )
 
-func instructionVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
-	d, err := i.dstack.Pop()
+func instructionVERIFY(ctx *InterpreterContext) error {
+	d, err := ctx.i.dstack.Pop()
 	if err != nil {
 		return err
 	}
@@ -21,8 +21,11 @@ func instructionVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Chec
 	return nil
 }
 
-func instructionIF(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionIF(ctx *InterpreterContext) error {
+	i := ctx.i
+	ins := ctx.ins
 	cond := OpCondFalse
+
 	if !i.shouldSkip() {
 		d, err := i.dstack.Pop()
 		if err != nil {
@@ -49,7 +52,8 @@ func instructionIF(i *Interpreter, ins *Instruction, flag Flag, checker Checker)
 	return nil
 }
 
-func instructionENDIF(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionENDIF(ctx *InterpreterContext) error {
+	i := ctx.i
 	if len(i.cstack) == 0 {
 		return ErrInterpreterNoMatchConditional
 	}
@@ -58,7 +62,8 @@ func instructionENDIF(i *Interpreter, ins *Instruction, flag Flag, checker Check
 	return nil
 }
 
-func instructionELSE(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionELSE(ctx *InterpreterContext) error {
+	i := ctx.i
 	if len(i.cstack) == 0 {
 		return ErrInterpreterNoMatchConditional
 	}

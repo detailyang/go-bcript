@@ -1,6 +1,7 @@
 package bscript
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -26,11 +27,11 @@ func NewScript() *Script {
 	}
 }
 
-func NewScriptFromBytes(src []byte) (*Script, error) {
+func NewScriptFromBytes(src []byte) *Script {
 	return &Script{
 		Data: src,
 		Pos:  0,
-	}, nil
+	}
 }
 
 func NewScriptFromString(src string) (*Script, error) {
@@ -54,7 +55,7 @@ func NewScriptFromString(src string) (*Script, error) {
 			if !ok {
 				return nil, ErrScriptBadTypeCast
 			}
-			script.AddOPCode(opcode)
+			script.PushOPCode(opcode)
 
 			if OP_PUSHBYTES_1 <= opcode && opcode <= OP_PUSHDATA4 {
 				needPushSize = false
@@ -80,27 +81,27 @@ func NewScriptFromString(src string) (*Script, error) {
 			if needPushSize {
 				switch {
 				case size <= math.MaxInt8:
-					script.AddOPCode(OP_PUSHDATA1)
-					script.AddBytes([]byte{byte(size)})
+					script.PushOPCode(OP_PUSHDATA1)
+					script.PushBytes([]byte{byte(size)})
 				case size <= math.MaxInt16:
-					script.AddOPCode(OP_PUSHDATA2)
+					script.PushOPCode(OP_PUSHDATA2)
 					buf := make([]byte, 2)
 					binary.LittleEndian.PutUint16(buf, uint16(size))
-					script.AddBytes(buf)
+					script.PushBytes(buf)
 				case size <= math.MaxInt32:
-					script.AddOPCode(OP_PUSHDATA4)
+					script.PushOPCode(OP_PUSHDATA4)
 					buf := make([]byte, 4)
 					binary.LittleEndian.PutUint32(buf, uint32(size))
-					script.AddBytes(buf)
+					script.PushBytes(buf)
 				default:
 					return nil, ErrScriptPushSizeOverflow
 				}
 			}
 
 			if value != 0 {
-				script.AddNumber(n)
+				script.PushNumber(n)
 			} else {
-				script.AddBytes([]byte{0})
+				script.PushBytes([]byte{0})
 			}
 		case TOKEN_HEXSTRING:
 			value, ok := tok.value.([]byte)
@@ -113,43 +114,91 @@ func NewScriptFromString(src string) (*Script, error) {
 			if needPushSize {
 				switch {
 				case size <= math.MaxInt8:
-					script.AddOPCode(OP_PUSHDATA1)
-					script.AddBytes([]byte{byte(size)})
+					script.PushOPCode(OP_PUSHDATA1)
+					script.PushBytes([]byte{byte(size)})
 				case size <= math.MaxInt16:
-					script.AddOPCode(OP_PUSHDATA2)
+					script.PushOPCode(OP_PUSHDATA2)
 					buf := make([]byte, 2)
 					binary.LittleEndian.PutUint16(buf, uint16(size))
-					script.AddBytes(buf)
+					script.PushBytes(buf)
 				case size <= math.MaxInt32:
-					script.AddOPCode(OP_PUSHDATA4)
+					script.PushOPCode(OP_PUSHDATA4)
 					buf := make([]byte, 4)
 					binary.LittleEndian.PutUint32(buf, uint32(size))
-					script.AddBytes(buf)
+					script.PushBytes(buf)
 				default:
 					return nil, ErrScriptPushSizeOverflow
 				}
 			}
 
-			script.AddBytes(value)
+			script.PushBytes(value)
 		}
 	}
 
 	return script, nil
 }
 
-func (s *Script) AddBytes(b []byte) *Script {
+func (s *Script) PushBytesWithOP(b []byte) *Script {
+	size := len(b)
+
+	switch {
+	case size <= math.MaxInt8:
+		s.PushOPCode(OP_PUSHDATA1)
+		s.PushBytes([]byte{byte(size)})
+	case size <= math.MaxInt16:
+		s.PushOPCode(OP_PUSHDATA2)
+		buf := make([]byte, 2)
+		binary.LittleEndian.PutUint16(buf, uint16(size))
+		s.PushBytes(buf)
+	case size <= math.MaxInt32:
+		s.PushOPCode(OP_PUSHDATA4)
+		buf := make([]byte, 4)
+		binary.LittleEndian.PutUint32(buf, uint32(size))
+		s.PushBytes(buf)
+	default:
+		panic("Cannot push more than 2^32 bytes to script")
+	}
+
+	s.PushBytes(b)
+
+	return s
+}
+
+func (s *Script) PushBytes(b []byte) *Script {
 	s.Data = append(s.Data, b...)
 	return s
 }
 
-func (s *Script) AddOPCode(opcode OPCode) *Script {
+func (s *Script) PushOPCode(opcode OPCode) *Script {
 	s.Data = append(s.Data, byte(opcode))
 	return s
 }
 
-func (s *Script) AddNumber(n Number) *Script {
+func (s *Script) PushNumber(n Number) *Script {
 	s.Data = append(s.Data, n.Bytes()...)
 	return s
+}
+
+func (s *Script) Filter(fs *Script) *Script {
+	pos := 0
+	size := len(fs.Data)
+	end := len(s.Data)
+	rv := make([]byte, 0, end)
+
+	if size > end || size == 0 {
+		return NewScriptFromBytes(s.Bytes())
+	}
+
+	for pos < end-size {
+		if bytes.Equal(s.Data[pos:pos+size], fs.Data) {
+			pos += size
+		} else {
+			rv = append(rv, s.Data[pos])
+			pos += 1
+		}
+	}
+
+	return NewScriptFromBytes(rv)
 }
 
 func (s *Script) takePushBytes(offset, n int) ([]byte, error) {
@@ -175,6 +224,14 @@ func (s *Script) takeBytes(offset, n int) ([]byte, error) {
 	}
 
 	return s.Data[offset : offset+n], nil
+}
+
+func (s *Script) SubScript(from int) (*Script, error) {
+	if from >= len(s.Data) {
+		return nil, ErrScriptTakeOverflow
+	}
+
+	return NewScriptFromBytes(s.Data[from:]), nil
 }
 
 func (s *Script) Next() (*Instruction, error) {
@@ -245,7 +302,9 @@ func (s *Script) Next() (*Instruction, error) {
 }
 
 func (s *Script) Bytes() []byte {
-	return s.Data
+	buf := make([]byte, len(s.Data))
+	copy(buf, s.Data)
+	return buf
 }
 
 func (s *Script) Size() int {

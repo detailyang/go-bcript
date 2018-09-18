@@ -3,14 +3,16 @@ package bscript
 type Checker interface {
 	CheckLockTime(locktime uint32) error
 	CheckSequence(sequence uint32) error
-	CheckSignature() error
+	CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error
 }
 
 type NoopChecker struct{}
 
 func (n *NoopChecker) CheckLockTime(locktime uint32) error { return nil }
 func (n *NoopChecker) CheckSequence(sequence uint32) error { return nil }
-func (n *NoopChecker) CheckSignature() error               { return nil }
+func (n *NoopChecker) CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error {
+	return nil
+}
 
 func CheckHashTypeEncoding(hashtype byte, flag Flag) error {
 	return nil

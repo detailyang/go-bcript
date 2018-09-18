@@ -12,7 +12,8 @@ const (
 	SequenceLockTimeDisabledFlag = 1 << 31
 )
 
-func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionRIPEMD160(ctx *InterpreterContext) error {
+	i := ctx.i
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -27,7 +28,8 @@ func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag, checker C
 	return nil
 }
 
-func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionSHA1(ctx *InterpreterContext) error {
+	i := ctx.i
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -42,7 +44,8 @@ func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag, checker Checke
 	return nil
 }
 
-func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionSHA256(ctx *InterpreterContext) error {
+	i := ctx.i
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -54,7 +57,8 @@ func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag, checker Chec
 	return nil
 }
 
-func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionHASH160(ctx *InterpreterContext) error {
+	i := ctx.i
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -68,7 +72,9 @@ func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag, checker Che
 	return nil
 }
 
-func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionHASH256(ctx *InterpreterContext) error {
+	i := ctx.i
+
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -81,12 +87,19 @@ func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag, checker Che
 	return nil
 }
 
-func instructionCODESEPARATOR(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionCODESEPARATOR(ctx *InterpreterContext) error {
+	i := ctx.i
 	i.codesep = i.pc
 	return nil
 }
 
-func instructionCHECKSIG(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionCHECKSIG(ctx *InterpreterContext) error {
+	script := ctx.script
+	i := ctx.i
+	flag := ctx.flag
+	sigver := ctx.sigver
+	checker := ctx.checker
+
 	d1, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -117,22 +130,40 @@ func instructionCHECKSIG(i *Interpreter, ins *Instruction, flag Flag, checker Ch
 		return err
 	}
 
+	subscript, err := script.SubScript(i.codesep)
+	if err != nil {
+		return err
+	}
+
+	if sigver == SignatureVersionBase {
+		sigscript := NewScript().PushBytesWithOP(sig)
+		subscript = subscript.Filter(sigscript)
+	}
+
+	if err := checker.CheckSignature(sig, pubkey, subscript, sigver); err != nil {
+		return err
+	}
+
+	if ctx.ins.OPCode == OP_CHECKSIGVERIFY {
+		return instructionVERIFY(ctx)
+	}
+
 	return nil
 }
 
-func instructionCHECKSIGVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 	return nil
 }
 
-func instructionCHECKMULTISIG(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionCHECKMULTISIGVERIFY(ctx *InterpreterContext) error {
 	return nil
 }
 
-func instructionCHECKMULTISIGVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
-	return nil
-}
+func instructionCHECKLOCKTIMEVERIFY(ctx *InterpreterContext) error {
+	i := ctx.i
+	flag := ctx.flag
+	checker := ctx.checker
 
-func instructionCHECKLOCKTIMEVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	if flag.Has(ScriptVerifyCheckLockTimeVerify) {
 		d, err := i.dstack.Pop()
 		if err != nil {
@@ -159,7 +190,11 @@ func instructionCHECKLOCKTIMEVERIFY(i *Interpreter, ins *Instruction, flag Flag,
 	return nil
 }
 
-func instructionCHECKSEQUENCEVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+func instructionCHECKSEQUENCEVERIFY(ctx *InterpreterContext) error {
+	i := ctx.i
+	flag := ctx.flag
+	checker := ctx.checker
+
 	if flag.Has(ScriptVerifyCheckSequenceVerify) {
 		d, err := i.dstack.Pop()
 		if err != nil {
