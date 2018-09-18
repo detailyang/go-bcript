@@ -1,6 +1,6 @@
 package bscript
 
-func instructionTOTALSTACK(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionTOTALSTACK(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	data, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -10,7 +10,7 @@ func instructionTOTALSTACK(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionFROMALTSTACK(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionFROMALTSTACK(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	data, err := i.astack.Pop()
 	if err != nil {
 		return err
@@ -20,7 +20,7 @@ func instructionFROMALTSTACK(i *Interpreter, ins *Instruction, flag Flag) error 
 	return nil
 }
 
-func instruction2DROP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction2DROP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	if i.dstack.Depth() < 2 {
 		return ErrInterpreterStackSizeNotEnough
 	}
@@ -31,7 +31,7 @@ func instruction2DROP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instruction2DUP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction2DUP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func instruction2DUP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instruction3DUP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction3DUP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-3)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func instruction3DUP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instruction2OVER(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction2OVER(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-4)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func instruction2OVER(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instruction2ROT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction2ROT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-6)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func instruction2ROT(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instruction2SWAP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instruction2SWAP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	if err := i.dstack.Swap(-4, -2); err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func instruction2SWAP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionIFDUP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionIFDUP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(0)
 	if err != nil {
 		return err
@@ -126,17 +126,17 @@ func instructionIFDUP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionDEPTH(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionDEPTH(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	i.dstack.Push(Number(i.dstack.Depth()).Bytes())
 	return nil
 }
 
-func instructionDROP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionDROP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	_, err := i.dstack.Pop()
 	return err
 }
 
-func instructionDUP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionDUP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(-1)
 	if err != nil {
 		return err
@@ -147,11 +147,11 @@ func instructionDUP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionNIP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionNIP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return i.dstack.Remove(-2)
 }
 
-func instructionOVER(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionOVER(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func instructionOVER(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionROLL(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionROLL(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func instructionROLL(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionROT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionROT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	if err := i.dstack.Swap(-3, -2); err != nil {
 		return err
 	}
@@ -199,11 +199,11 @@ func instructionROT(i *Interpreter, ins *Instruction, flag Flag) error {
 	return i.dstack.Swap(-2, -1)
 }
 
-func instructionSWAP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionSWAP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return i.dstack.Swap(-2, -1)
 }
 
-func instructionTUCK(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionTUCK(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(-1)
 	if err != nil {
 		return err

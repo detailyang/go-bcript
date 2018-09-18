@@ -5,20 +5,23 @@ import (
 )
 
 var (
-	ErrInterpreterScriptSize            = errors.New("intrepreter: over script size 1000")
-	ErrIntrepreterScriptOPCount         = errors.New("intrepreter: over script op count 210")
-	ErrIntrepreterInvalidStackOperation = errors.New("intrepreter: invalid stack operation")
-	ErrInterpreterOperandsSize          = errors.New("interpreter: operands size are not equal")
-	ErrInterpreterVerifyFailed          = errors.New("interpreter: verify failed")
-	ErrInterpreterDivZero               = errors.New("interpreter: div zero")
-	ErrInterpreterModZero               = errors.New("interpreter: mod zero")
-	ErrInterpreterBadInstruction        = errors.New("intrepreter: bad instruction")
-	ErrInterpreterStackSizeNotEnough    = errors.New("intrepreter: stack not enough")
-	ErrInterpreterNoMatchConditional    = errors.New("interpreter: no match conditional")
-	ErrIntrepreterBadOPCode             = errors.New("intrepreter: bad opcode")
-	ErrIntrepreterStackOverflow         = errors.New("intrepreter: data stack overflow")
-	ErrInterpreterUnbalancedConditional = errors.New("interpreter: unbalanced conditional")
-	ErrIntrepreterDisabledOPCode        = errors.New("interpreter: disabled opcode")
+	ErrInterpreterScriptSize               = errors.New("intrepreter: over script size 1000")
+	ErrIntrepreterScriptOPCount            = errors.New("intrepreter: over script op count 210")
+	ErrIntrepreterInvalidStackOperation    = errors.New("intrepreter: invalid stack operation")
+	ErrInterpreterOperandsSize             = errors.New("interpreter: operands size are not equal")
+	ErrInterpreterVerifyFailed             = errors.New("interpreter: verify failed")
+	ErrInterpreterDivZero                  = errors.New("interpreter: div zero")
+	ErrInterpreterModZero                  = errors.New("interpreter: mod zero")
+	ErrInterpreterBadInstruction           = errors.New("intrepreter: bad instruction")
+	ErrInterpreterStackSizeNotEnough       = errors.New("intrepreter: stack not enough")
+	ErrInterpreterNoMatchConditional       = errors.New("interpreter: no match conditional")
+	ErrIntrepreterBadOPCode                = errors.New("intrepreter: bad opcode")
+	ErrIntrepreterStackOverflow            = errors.New("intrepreter: data stack overflow")
+	ErrInterpreterUnbalancedConditional    = errors.New("interpreter: unbalanced conditional")
+	ErrIntrepreterDisabledOPCode           = errors.New("interpreter: disabled opcode")
+	ErrIntrepreterNegativeLocktime         = errors.New("interpreter: negative locktime")
+	ErrIntrepreterUnsatisfiedLocktime      = errors.New("intrepreter: unsatisfied locktime")
+	ErrIntrepreterDiscourageUpgradableNops = errors.New("intrepreter: discourage upgradable nops")
 )
 
 const (
@@ -52,7 +55,7 @@ func (i *Interpreter) GetDStack() *Stack {
 	return i.dstack
 }
 
-func (i *Interpreter) Eval(script *Script, flag Flag) error {
+func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker) error {
 	if script.Size() > MaxIntrepreterScriptSize {
 		return ErrInterpreterScriptSize
 	}
@@ -87,7 +90,7 @@ func (i *Interpreter) Eval(script *Script, flag Flag) error {
 			return ErrIntrepreterBadOPCode
 		}
 
-		if err := operator(i, ins, flag); err != nil {
+		if err := operator(i, ins, flag, checker); err != nil {
 			return err
 		}
 

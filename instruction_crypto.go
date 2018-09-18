@@ -7,7 +7,12 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag) error {
+// Below flags apply in the context of BIP 68
+const (
+	SequenceLockTimeDisabledFlag = 1 << 31
+)
+
+func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -22,7 +27,7 @@ func instructionRIPEMD160(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -37,7 +42,7 @@ func instructionSHA1(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -49,7 +54,7 @@ func instructionSHA256(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -63,7 +68,7 @@ func instructionHASH160(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -76,23 +81,109 @@ func instructionHASH256(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionCODESEPARATOR(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCODESEPARATOR(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	i.codesep = i.pc
 	return nil
 }
 
-func instructionCHECKSIG(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCHECKSIG(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	d1, err := i.dstack.Pop()
+	if err != nil {
+		return err
+	}
+	d2, err := i.dstack.Pop()
+	if err != nil {
+		return err
+	}
+
+	pubkey := d1.Bytes()
+	sig := d2.Bytes()
+	hashtype := sig[len(sig)-1]
+
+	if len(sig) < 1 {
+		i.dstack.Push(Boolean(false).Bytes())
+		return nil
+	}
+
+	if err := CheckHashTypeEncoding(hashtype, flag); err != nil {
+		return err
+	}
+
+	if err := CheckPubkeyEncoding(pubkey, flag); err != nil {
+		return err
+	}
+
+	if err := CheckSignatureEncoding(sig, flag); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func instructionCHECKSIGVERIFY(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCHECKSIGVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return nil
 }
 
-func instructionCHECKMULTISIG(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCHECKMULTISIG(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return nil
 }
 
-func instructionCHECKMULTISIGVERIFY(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCHECKMULTISIGVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	return nil
+}
+
+func instructionCHECKLOCKTIMEVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	if flag.Has(ScriptVerifyCheckLockTimeVerify) {
+		d, err := i.dstack.Pop()
+		if err != nil {
+			return err
+		}
+
+		locktime, err := d.Number(flag.Has(ScriptVerifyMinimalData), 5)
+		if err != nil {
+			return err
+		}
+
+		if locktime.IsNegative() {
+			return ErrIntrepreterNegativeLocktime
+		}
+
+		if err := checker.CheckLockTime(uint32(locktime)); err != nil {
+			return ErrIntrepreterUnsatisfiedLocktime
+		}
+
+	} else if flag.Has(ScriptDiscourageUpgradableNops) {
+		return ErrIntrepreterDiscourageUpgradableNops
+	}
+
+	return nil
+}
+
+func instructionCHECKSEQUENCEVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	if flag.Has(ScriptVerifyCheckSequenceVerify) {
+		d, err := i.dstack.Pop()
+		if err != nil {
+			return err
+		}
+
+		sequence, err := d.Number(flag.Has(ScriptVerifyMinimalData), 5)
+		if err != nil {
+			return err
+		}
+
+		if sequence.IsNegative() {
+			return ErrIntrepreterNegativeLocktime
+		}
+
+		if sequence&SequenceLockTimeDisabledFlag == SequenceLockTimeDisabledFlag {
+			if err := checker.CheckSequence(uint32(sequence)); err != nil {
+				return ErrIntrepreterUnsatisfiedLocktime
+			}
+		}
+
+	} else if flag.Has(ScriptDiscourageUpgradableNops) {
+		return ErrIntrepreterDiscourageUpgradableNops
+	}
+
 	return nil
 }

@@ -1,6 +1,6 @@
 package bscript
 
-func instructionBINARY(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionBINARY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	n1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -114,13 +114,13 @@ func instructionBINARY(i *Interpreter, ins *Instruction, flag Flag) error {
 	i.dstack.Push(d0.Bytes())
 
 	if ins.OPCode == OP_NUMEQUALVERIFY {
-		return instructionVERIFY(i, ins, flag)
+		return instructionVERIFY(i, ins, flag, checker)
 	}
 
 	return nil
 }
 
-func instructionUNARY(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionUNARY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	b, err := i.dstack.Pop()
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func instructionUNARY(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionWITHIN(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionWITHIN(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	required := flag.Has(ScriptVerifyMinimalData)
 
 	d1, err := i.dstack.Peek(-3)

@@ -28,7 +28,7 @@ func run(code string) (*Stack, error) {
 	}
 
 	interpreter := NewInterpreter()
-	err = interpreter.Eval(script, ScriptSkipDisabledOPCode)
+	err = interpreter.Eval(script, ScriptSkipDisabledOPCode, &NoopChecker{})
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func TestInterpreterOPNumberic(t *testing.T) {
 		}
 
 		interpreter := NewInterpreter()
-		err = interpreter.Eval(script, ScriptSkipDisabledOPCode)
+		err = interpreter.Eval(script, ScriptSkipDisabledOPCode, &NoopChecker{})
 		if err != nil {
 			t.Fatal(err)
 		}

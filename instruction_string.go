@@ -1,6 +1,6 @@
 package bscript
 
-func instructionCAT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionCAT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -18,19 +18,19 @@ func instructionCAT(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionSUBSTR(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionSUBSTR(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return nil
 }
 
-func instructionLEFT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionLEFT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return nil
 }
 
-func instructionRIGHT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionRIGHT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return nil
 }
 
-func instructionSIZE(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionSIZE(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(-1)
 	if err != nil {
 		return err

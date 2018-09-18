@@ -45,7 +45,7 @@ func (ins *Instruction) String() string {
 	return strings.Join(rv, " ")
 }
 
-type Operator func(i *Interpreter, ins *Instruction, flag Flag) error
+type Operator func(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error
 
 var instructionOperator = map[OPCode]Operator{
 	OP_0:            instructionPushOP0,
@@ -211,8 +211,8 @@ var instructionOperator = map[OPCode]Operator{
 	OP_MUL:    instructionBINARY,
 	OP_DIV:    instructionBINARY,
 	OP_MOD:    instructionBINARY,
-	OP_LSHIFT: instructionLSFHIT,
-	OP_RSHIFT: instructionRSHIFT,
+	OP_LSHIFT: instructionSFHIT,
+	OP_RSHIFT: instructionSFHIT,
 
 	OP_BOOLAND:            instructionBINARY,
 	OP_BOOLOR:             instructionBINARY,
@@ -241,9 +241,10 @@ var instructionOperator = map[OPCode]Operator{
 
 	// expansion
 	OP_NOP1:                instructionRESERVED,
-	OP_CHECKLOCKTIMEVERIFY: instructionRESERVED,
+	OP_CHECKLOCKTIMEVERIFY: instructionCHECKLOCKTIMEVERIFY,
 	//OP_NOP2 = OP_CHECKLOCKTIMEVERIFY
-	OP_CHECKSEQUENCEVERIFY: instructionRESERVED,
+	OP_CHECKSEQUENCEVERIFY: instructionCHECKSEQUENCEVERIFY,
+
 	//OP_NOP3 = OP_CHECKSEQUENCEVERIFY
 	OP_NOP4:  instructionRESERVED,
 	OP_NOP5:  instructionRESERVED,
@@ -254,6 +255,6 @@ var instructionOperator = map[OPCode]Operator{
 	OP_NOP10: instructionRESERVED,
 }
 
-func instructionRESERVED(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionRESERVED(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	return ErrInstructionReserved
 }

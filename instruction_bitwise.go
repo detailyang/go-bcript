@@ -1,6 +1,6 @@
 package bscript
 
-func instructionEQUAL(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionEQUAL(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func instructionEQUAL(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionINVERT(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionINVERT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d, err := i.dstack.Peek(-1)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func instructionINVERT(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionBITOP(i *Interpreter, ins *Instruction, flag Flag) error {
+func instructionBITOP(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
 	d1, err := i.dstack.Peek(-2)
 	if err != nil {
 		return err
@@ -61,18 +61,44 @@ func instructionBITOP(i *Interpreter, ins *Instruction, flag Flag) error {
 	return nil
 }
 
-func instructionEQUALVERIFY(i *Interpreter, ins *Instruction, flag Flag) error {
-	if err := instructionEQUAL(i, ins, flag); err != nil {
+func instructionEQUALVERIFY(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	if err := instructionEQUAL(i, ins, flag, checker); err != nil {
 		return err
 	}
 
-	return instructionVERIFY(i, ins, flag)
+	return instructionVERIFY(i, ins, flag, checker)
 }
 
-func instructionLSFHIT(i *Interpreter, ins *Instruction, flag Flag) error {
-	return nil
-}
+func instructionSFHIT(i *Interpreter, ins *Instruction, flag Flag, checker Checker) error {
+	d1, err := i.dstack.Peek(-2)
+	if err != nil {
+		return err
+	}
+	d2, err := i.dstack.Peek(-1)
+	if err != nil {
+		return err
+	}
 
-func instructionRSHIFT(i *Interpreter, ins *Instruction, flag Flag) error {
+	n1, err := d1.Number(flag.Has(ScriptVerifyMinimalData), NumberDefaultElementSize)
+	if err != nil {
+		return err
+	}
+
+	n2, err := d2.Number(flag.Has(ScriptVerifyMinimalData), NumberDefaultElementSize)
+	if err != nil {
+		return err
+	}
+
+	var n0 int
+	if ins.OPCode == OP_LSHIFT {
+		n0 = int(n1) << uint(n2)
+	} else {
+		n0 = int(n1) >> uint(n2)
+	}
+
+	i.dstack.Pop()
+	i.dstack.Pop()
+	i.dstack.Push(Number(n0).Bytes())
+
 	return nil
 }
