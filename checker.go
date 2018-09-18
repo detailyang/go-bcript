@@ -8,6 +8,7 @@ type Checker interface {
 
 type NoopChecker struct{}
 
+func NewNoopChecker() *NoopChecker                         { return &NoopChecker{} }
 func (n *NoopChecker) CheckLockTime(locktime uint32) error { return nil }
 func (n *NoopChecker) CheckSequence(sequence uint32) error { return nil }
 func (n *NoopChecker) CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error {

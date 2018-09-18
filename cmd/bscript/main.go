@@ -17,7 +17,7 @@ func main() {
 	}
 
 	interpreter := bscript.NewInterpreter()
-	err = interpreter.Eval(script, bscript.ScriptSkipDisabledOPCode)
+	err = interpreter.Eval(script, bscript.ScriptSkipDisabledOPCode, bscript.NewNoopChecker(), bscript.SignatureVersionBase)
 	if err != nil {
 		panic(err)
 	}
