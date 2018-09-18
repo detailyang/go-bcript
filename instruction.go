@@ -17,6 +17,15 @@ type Instruction struct {
 	Data   []byte
 }
 
+func (ins *Instruction) IsConditional() bool {
+	if ins.OPCode == OP_IF || ins.OPCode == OP_NOTIF || ins.OPCode == OP_ELSE ||
+		ins.OPCode == OP_ENDIF {
+		return true
+	}
+
+	return false
+}
+
 func (ins *Instruction) String() string {
 	rv := make([]string, 0, 36)
 	rv = append(rv, fmt.Sprintf("%-16s", ins.OPCode))

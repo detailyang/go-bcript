@@ -105,6 +105,10 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 			return ErrIntrepreterDisabledOPCode
 		}
 
+		if i.shouldSkip() && !ins.IsConditional() {
+			return nil
+		}
+
 		operator, ok := instructionOperator[opcode]
 		if !ok {
 			return ErrIntrepreterBadOPCode
