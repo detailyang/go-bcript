@@ -3,6 +3,7 @@ package bscript
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"math"
 )
@@ -25,6 +26,15 @@ func NewScript() *Script {
 		Data: make([]byte, 0, 1024),
 		Pos:  0,
 	}
+}
+
+func NewSCriptFromHexString(hexstring string) (*Script, error) {
+	b, err := hex.DecodeString(hexstring)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewScriptFromBytes(b), nil
 }
 
 func NewScriptFromBytes(src []byte) *Script {
@@ -138,6 +148,45 @@ func NewScriptFromString(src string) (*Script, error) {
 	return script, nil
 }
 
+func (s Script) IsPushOnly() bool {
+	for {
+		ins, err := s.Next()
+		if err != nil {
+			break
+		}
+
+		if ins.OPCode > OP_16 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s Script) IsPayToScriptHash() bool {
+	return len(s.Data) == 23 &&
+		s.Data[0] == byte(OP_HASH160) &&
+		s.Data[1] == byte(OP_PUSHBYTES_20) &&
+		s.Data[22] == byte(OP_EQUAL)
+}
+
+// A scriptPubKey (or redeemScript as defined in BIP16/P2SH) that consists of a 1-byte push opcode (for 0 to 16) followed by a data push between 2 and 40 bytes gets a new special meaning. The value of the first push is called the "version byte". The following byte vector pushed is called the "witness program".
+func (s Script) ParseWitnessProgram() (uint8, []byte, bool) {
+	if len(s.Data) < 4 || len(s.Data) > 42 || len(s.Data) != int(s.Data[1])+2 {
+		return 0, nil, false
+	}
+
+	var version uint8
+	if OPCode(s.Data[0]) == 0 {
+	} else if OP_1 <= OPCode(s.Data[0]) && OPCode(s.Data[0]) <= OP_16 {
+		version = s.Data[0] - uint8(OP_1) + 1
+	} else {
+		return 0, nil, false
+	}
+
+	return version, s.Data[2:], true
+}
+
 func (s *Script) PushBytesWithOP(b []byte) *Script {
 	size := len(b)
 
@@ -161,6 +210,12 @@ func (s *Script) PushBytesWithOP(b []byte) *Script {
 
 	s.PushBytes(b)
 
+	return s
+}
+
+func (s *Script) PushInstruction(ins *Instruction) *Script {
+	s.Data = append(s.Data, byte(ins.OPCode))
+	s.Data = append(s.Data, ins.Data...)
 	return s
 }
 
@@ -232,6 +287,26 @@ func (s *Script) SubScript(from int) (*Script, error) {
 	}
 
 	return NewScriptFromBytes(s.Data[from:]), nil
+}
+
+func (s Script) WithoutSep() *Script {
+	ns := NewScript()
+
+	for {
+		ins, err := s.Next()
+		if err != nil {
+			break
+		}
+
+		opcode := ins.OPCode
+		if opcode == OP_CODESEPARATOR {
+			continue
+		}
+
+		ns.PushInstruction(ins)
+	}
+
+	return ns
 }
 
 func (s *Script) Next() (*Instruction, error) {

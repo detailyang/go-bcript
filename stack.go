@@ -23,6 +23,10 @@ func NewStack() *Stack {
 	}
 }
 
+func (s *Stack) CloneFrom(ns *Stack) {
+	s.data = ns.data
+}
+
 func (s *Stack) Reverse() {
 	for i, j := 0, len(s.data); i < j; i, j = i+1, j-1 {
 		s.data[i], s.data[j] = s.data[j], s.data[i]
@@ -172,10 +176,25 @@ func (s *Stack) Peek(n int) (StackElemnt, error) {
 	return s.data[n+depth], nil
 }
 
+func (s *Stack) Iter(fn func(e StackElemnt)) {
+	for _, elem := range s.data {
+		fn(elem)
+	}
+}
+
 func (s *Stack) Clean() {
 	s.data = s.data[:0]
 }
 
 func (s *Stack) Depth() int {
 	return len(s.data)
+}
+
+func (s *Stack) Clone() *Stack {
+	data := make([]StackElemnt, len(s.data))
+	copy(data, s.data)
+
+	return &Stack{
+		data: data,
+	}
 }

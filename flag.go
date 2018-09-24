@@ -83,6 +83,8 @@ const (
 
 	// ScriptEnableSigHashForkId makes signature using SIGHASH_FORKID
 	ScriptEnableSigHashForkId
+
+	ScriptVerfiyP2SH
 )
 
 func (f Flag) Has(mask Flag) bool {

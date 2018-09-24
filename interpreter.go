@@ -1,32 +1,48 @@
 package bscript
 
 import (
+	"bytes"
 	"errors"
+
+	. "github.com/detailyang/go-bprimitives"
 )
 
 var (
-	ErrInterpreterScriptSize               = errors.New("intrepreter: over script size 1000")
-	ErrIntrepreterScriptOPCount            = errors.New("intrepreter: over script op count 210")
-	ErrIntrepreterInvalidStackOperation    = errors.New("intrepreter: invalid stack operation")
-	ErrInterpreterOperandsSize             = errors.New("interpreter: operands size are not equal")
-	ErrInterpreterVerifyFailed             = errors.New("interpreter: verify failed")
-	ErrInterpreterDivZero                  = errors.New("interpreter: div zero")
-	ErrInterpreterModZero                  = errors.New("interpreter: mod zero")
-	ErrInterpreterBadInstruction           = errors.New("intrepreter: bad instruction")
-	ErrInterpreterStackSizeNotEnough       = errors.New("intrepreter: stack not enough")
-	ErrInterpreterNoMatchConditional       = errors.New("interpreter: no match conditional")
-	ErrIntrepreterBadOPCode                = errors.New("intrepreter: bad opcode")
-	ErrIntrepreterStackOverflow            = errors.New("intrepreter: data stack overflow")
-	ErrInterpreterUnbalancedConditional    = errors.New("interpreter: unbalanced conditional")
-	ErrIntrepreterDisabledOPCode           = errors.New("interpreter: disabled opcode")
-	ErrIntrepreterNegativeLocktime         = errors.New("interpreter: negative locktime")
-	ErrIntrepreterUnsatisfiedLocktime      = errors.New("intrepreter: unsatisfied locktime")
-	ErrIntrepreterDiscourageUpgradableNops = errors.New("intrepreter: discourage upgradable nops")
+	ErrInterpreterScriptSize                         = errors.New("interpreter: over script size 1000")
+	ErrInterpreterScriptOPCount                      = errors.New("interpreter: over script op count 210")
+	ErrInterpreterInvalidStackOperation              = errors.New("interpreter: invalid stack operation")
+	ErrInterpreterOperandsSize                       = errors.New("interpreter: operands size are not equal")
+	ErrInterpreterVerifyFailed                       = errors.New("interpreter: verify failed")
+	ErrInterpreterDivZero                            = errors.New("interpreter: div zero")
+	ErrInterpreterModZero                            = errors.New("interpreter: mod zero")
+	ErrInterpreterBadInstruction                     = errors.New("interpreter: bad instruction")
+	ErrInterpreterStackSizeNotEnough                 = errors.New("interpreter: stack not enough")
+	ErrInterpreterNoMatchConditional                 = errors.New("interpreter: no match conditional")
+	ErrInterpreterBadOPCode                          = errors.New("interpreter: bad opcode")
+	ErrInterpreterStackOverflow                      = errors.New("interpreter: data stack overflow")
+	ErrInterpreterUnbalancedConditional              = errors.New("interpreter: unbalanced conditional")
+	ErrInterpreterDisabledOPCode                     = errors.New("interpreter: disabled opcode")
+	ErrInterpreterNegativeLocktime                   = errors.New("interpreter: negative locktime")
+	ErrInterpreterUnsatisfiedLocktime                = errors.New("interpreter: unsatisfied locktime")
+	ErrInterpreterDiscourageUpgradableNops           = errors.New("interpreter: discourage upgradable nops")
+	ErrInterpreterSignaturePushOnly                  = errors.New("interpreter: signature push only")
+	ErrInterpreterP2SHBadStack                       = errors.New("interpreter: p2sh bad stack")
+	ErrInterpreterParseWitnessFailed                 = errors.New("interpreter: parse witness program failed")
+	ErrInterpreterPushSize                           = errors.New("interpreter: bad push size")
+	ErrInterpreterWitnessMalleatedP2SH               = errors.New("interpreter: malleated P2SH")
+	ErrInterpreterDiscourageUpgradableWitnessProgram = errors.New("interpreter: discourage upgradable witness program")
+	ErrInterpreterWitnessProgramWitnessEmpty         = errors.New("interpreter: witness program witness empty")
+	ErrInterpreterWitnessProgramMismatch             = errors.New("interpreter: witness program mismatch")
+	ErrInterpreterWitnessProgramWrongLength          = errors.New("interpreter: witness program wrong length")
+	ErrInterpreterWitnessVerifyFailed                = errors.New("interpreter: witness verify failed")
+	ErrInterpreterWitnessMalleated                   = errors.New("interpreter: witness malleated")
+	ErrInterpreterCleanStack                         = errors.New("interpreter: clean stack")
+	ErrInterpreterWitnessUnexpected                  = errors.New("interpreter: wintess unexpected")
 )
 
 const (
-	MaxIntrepreterScriptSize = 1000
-	MaxINtrepreterScriptOPS  = 210
+	MaxInterpreterScriptSize = 1000
+	MaxIntrepreterScriptOPS  = 210
 )
 
 type Interpreter struct {
@@ -57,6 +73,213 @@ func NewInterpreterContext(script *Script, i *Interpreter, ins *Instruction, che
 	}
 }
 
+func copySlice(s []byte) []byte {
+	t := make([]byte, len(s))
+	copy(t, s)
+	return t
+}
+
+func verifyWitnessProgramm(
+	scriptWitness ScriptWitness,
+	witnessVersion uint8,
+	wintessProgram []byte,
+	flag Flag,
+	checker Checker,
+) error {
+	if witnessVersion != 0 {
+		if flag.Has(ScriptVerifyDiscourageUpgradeableWitnessProgram) {
+			return ErrInterpreterDiscourageUpgradableWitnessProgram
+		}
+
+		return nil
+	}
+
+	witnessStack := NewStack()
+	scriptPubkey := NewScript()
+
+	if len(wintessProgram) == 32 {
+		if scriptWitness.Size() == 0 {
+			return ErrInterpreterWitnessProgramWitnessEmpty
+		}
+
+		pubkey := scriptWitness[scriptWitness.Size()-1]
+		stack := scriptWitness[:scriptWitness.Size()-1]
+		scriptPubkeyHash := Hash256(scriptPubkey.Bytes())
+
+		if !scriptPubkeyHash.Equal(NewHash(wintessProgram[0:32])) {
+			return ErrInterpreterWitnessProgramMismatch
+		}
+
+		for _, s := range stack {
+			witnessStack.Push(copySlice(s))
+		}
+
+		scriptPubkey.PushBytes(pubkey)
+
+	} else if len(wintessProgram) == 20 {
+		if scriptWitness.Size() != 2 {
+			return ErrInterpreterWitnessProgramMismatch
+		}
+
+		scriptPubkey.
+			PushOPCode(OP_DUP).
+			PushOPCode(OP_HASH160).
+			PushBytesWithOP(wintessProgram).
+			PushOPCode(OP_EQUALVERIFY).
+			PushOPCode(OP_CHECKSIG)
+
+		for _, s := range scriptWitness {
+			witnessStack.Push(copySlice(s))
+		}
+	} else {
+		return ErrInterpreterWitnessProgramWrongLength
+	}
+
+	ok := true
+	witnessStack.Iter(func(e StackElemnt) {
+		if len(e.Bytes()) > MaxInterpreterScriptSize {
+			ok = false
+		}
+	})
+
+	if !ok {
+		return ErrInterpreterPushSize
+	}
+
+	interpreter := NewInterpreter()
+	interpreter.SetDStack(witnessStack)
+	err := interpreter.Eval(scriptPubkey, flag, checker, SignatureVersionWitnessV0)
+	if err != nil {
+		return err
+	}
+
+	d, err := witnessStack.Peek(-1)
+	if err != nil {
+		return err
+	}
+
+	if !d.Boolean() {
+		return ErrInterpreterWitnessVerifyFailed
+	}
+
+	return nil
+}
+
+func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, flag Flag, checker Checker, sigversion SignatureVersion) error {
+	if flag.Has(ScriptVerifySigPushOnly) && !scriptSig.IsPushOnly() {
+		return ErrInterpreterSignaturePushOnly
+	}
+
+	interpreter := NewInterpreter()
+	stack := NewStack()
+	interpreter.SetDStack(stack)
+	stackCopy := NewStack()
+	hadWitness := false
+	cleanStack := flag.Has(ScriptVerifyCleanStack)
+
+	err := interpreter.Eval(scriptSig, flag, checker, sigversion)
+	if err != nil {
+		return err
+	}
+
+	if flag.Has(ScriptVerfiyP2SH) {
+		stackCopy = stack.Clone()
+	}
+
+	err = interpreter.Eval(scriptPubkey, flag, checker, sigversion)
+	if err != nil {
+		return err
+	}
+
+	// Verify witness program
+	if flag.Has(ScriptVerifyWitness) {
+		witnessVersion, witnessProgram, ok := scriptPubkey.ParseWitnessProgram()
+		if !ok {
+			return ErrInterpreterWitnessMalleated
+		}
+
+		hadWitness = true
+		cleanStack = false
+
+		err = verifyWitnessProgramm(
+			scriptWitness,
+			witnessVersion,
+			witnessProgram,
+			flag,
+			checker)
+		if err != nil {
+			return err
+		}
+	}
+
+	if flag.Has(ScriptVerfiyP2SH) && scriptPubkey.IsPayToScriptHash() {
+		if !scriptSig.IsPushOnly() {
+			return ErrInterpreterSignaturePushOnly
+		}
+
+		stack.CloneFrom(stackCopy)
+
+		// stack cannot be empty here, because if it was the
+		// P2SH  HASH <> EQUAL  scriptPubKey would be evaluated with
+		// an empty stack and the EvalScript above would return false.
+		if stack.Depth() == 0 {
+			return ErrInterpreterP2SHBadStack
+		}
+
+		d, err := stack.Pop()
+		if err != nil {
+			return err
+		}
+
+		pubkey := NewScriptFromBytes(d.Bytes())
+		err = interpreter.Eval(pubkey, flag, checker, sigversion)
+		if err != nil {
+			return err
+		}
+
+		if flag.Has(ScriptVerifyWitness) {
+			witnessVersion, witnessProgram, ok := pubkey.ParseWitnessProgram()
+			if !ok {
+				return ErrInterpreterParseWitnessFailed
+			}
+
+			if !bytes.Equal(scriptSig.Bytes(), NewScript().PushBytesWithOP(pubkey.Bytes()).Bytes()) {
+				return ErrInterpreterWitnessMalleatedP2SH
+			}
+
+			hadWitness = true
+			cleanStack = false
+			err = verifyWitnessProgramm(
+				scriptWitness,
+				witnessVersion,
+				witnessProgram,
+				flag,
+				checker)
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
+	// The CLEANSTACK check is only performed after potential P2SH evaluation,
+	// as the non-P2SH evaluation of a P2SH script will obviously not result in
+	// a clean stack (the P2SH inputs remain). The same holds for witness evaluation.
+	if cleanStack {
+		if stack.Depth() != 1 {
+			return ErrInterpreterCleanStack
+		}
+	}
+
+	if flag.Has(ScriptVerifyWitness) {
+		if !hadWitness && scriptWitness.Size() == 0 {
+			return ErrInterpreterWitnessUnexpected
+		}
+	}
+
+	return nil
+}
+
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
 		dstack:  NewStack(),
@@ -76,7 +299,7 @@ func (i *Interpreter) GetDStack() *Stack {
 }
 
 func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversion SignatureVersion) error {
-	if script.Size() > MaxIntrepreterScriptSize {
+	if script.Size() > MaxInterpreterScriptSize {
 		return ErrInterpreterScriptSize
 	}
 
@@ -96,13 +319,13 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 		opcode := ins.OPCode
 		if opcode.IsCountable() {
 			nop++
-			if nop > MaxINtrepreterScriptOPS {
-				return ErrIntrepreterScriptOPCount
+			if nop > MaxIntrepreterScriptOPS {
+				return ErrInterpreterScriptOPCount
 			}
 		}
 
 		if !flag.Has(ScriptSkipDisabledOPCode) && opcode.IsDisabled() {
-			return ErrIntrepreterDisabledOPCode
+			return ErrInterpreterDisabledOPCode
 		}
 
 		if i.shouldSkip() && !ins.IsConditional() {
@@ -111,7 +334,7 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 
 		operator, ok := instructionOperator[opcode]
 		if !ok {
-			return ErrIntrepreterBadOPCode
+			return ErrInterpreterBadOPCode
 		}
 
 		ctx := NewInterpreterContext(script, i, ins, checker, flag, sigversion)
@@ -120,7 +343,7 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 		}
 
 		if i.dstack.Depth()+i.astack.Depth() > 1000 {
-			return ErrIntrepreterStackOverflow
+			return ErrInterpreterStackOverflow
 		}
 	}
 

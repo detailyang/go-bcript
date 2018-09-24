@@ -176,15 +176,15 @@ func instructionCHECKLOCKTIMEVERIFY(ctx *InterpreterContext) error {
 		}
 
 		if locktime.IsNegative() {
-			return ErrIntrepreterNegativeLocktime
+			return ErrInterpreterNegativeLocktime
 		}
 
 		if err := checker.CheckLockTime(uint32(locktime)); err != nil {
-			return ErrIntrepreterUnsatisfiedLocktime
+			return ErrInterpreterUnsatisfiedLocktime
 		}
 
 	} else if flag.Has(ScriptDiscourageUpgradableNops) {
-		return ErrIntrepreterDiscourageUpgradableNops
+		return ErrInterpreterDiscourageUpgradableNops
 	}
 
 	return nil
@@ -207,17 +207,17 @@ func instructionCHECKSEQUENCEVERIFY(ctx *InterpreterContext) error {
 		}
 
 		if sequence.IsNegative() {
-			return ErrIntrepreterNegativeLocktime
+			return ErrInterpreterNegativeLocktime
 		}
 
 		if sequence&SequenceLockTimeDisabledFlag == SequenceLockTimeDisabledFlag {
 			if err := checker.CheckSequence(uint32(sequence)); err != nil {
-				return ErrIntrepreterUnsatisfiedLocktime
+				return ErrInterpreterUnsatisfiedLocktime
 			}
 		}
 
 	} else if flag.Has(ScriptDiscourageUpgradableNops) {
-		return ErrIntrepreterDiscourageUpgradableNops
+		return ErrInterpreterDiscourageUpgradableNops
 	}
 
 	return nil

@@ -17,10 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	script, err := bscript.NewScriptFromBytes([]byte(code))
-	if err != nil {
-		panic(err)
-	}
+	script := bscript.NewScriptFromBytes([]byte(code))
 
 	dissembler := bscript.NewDisassembler()
 	s, err := dissembler.Disassemble(script)

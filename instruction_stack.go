@@ -174,7 +174,7 @@ func instructionROLL(ctx *InterpreterContext) error {
 
 	npos := int(n)
 	if npos < 0 || npos >= ctx.i.dstack.Depth() {
-		return ErrIntrepreterInvalidStackOperation
+		return ErrInterpreterInvalidStackOperation
 	}
 
 	t, err := ctx.i.dstack.Peek(-npos - 1)
