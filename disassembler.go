@@ -26,5 +26,7 @@ func (d *Disassembler) Disassemble(script *Script) (string, error) {
 		rv = append(rv, fmt.Sprintf("%s", ins))
 	}
 
+	script.Reset()
+
 	return strings.Join(rv, "\n"), nil
 }

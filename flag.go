@@ -87,6 +87,10 @@ const (
 	ScriptVerfiyP2SH
 )
 
+func (f *Flag) Enable(mask Flag) {
+	*f |= mask
+}
+
 func (f Flag) Has(mask Flag) bool {
 	return f&mask == mask
 }

@@ -28,7 +28,7 @@ func NewScript() *Script {
 	}
 }
 
-func NewSCriptFromHexString(hexstring string) (*Script, error) {
+func NewScriptFromHexString(hexstring string) (*Script, error) {
 	b, err := hex.DecodeString(hexstring)
 	if err != nil {
 		return nil, err
@@ -374,6 +374,10 @@ func (s *Script) Next() (*Instruction, error) {
 	}
 
 	return nil, ErrScriptBadInstruction
+}
+
+func (s *Script) Reset() {
+	s.Pos = 0
 }
 
 func (s *Script) Bytes() []byte {
