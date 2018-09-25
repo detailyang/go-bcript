@@ -246,7 +246,7 @@ var instructionOperator = map[OPCode]Operator{
 	OP_CHECKSIG:            instructionCHECKSIG,
 	OP_CHECKSIGVERIFY:      instructionCHECKSIG,
 	OP_CHECKMULTISIG:       instructionCHECKMULTISIG,
-	OP_CHECKMULTISIGVERIFY: instructionCHECKMULTISIGVERIFY,
+	OP_CHECKMULTISIGVERIFY: instructionCHECKMULTISIG,
 
 	// expansion
 	OP_NOP1:                instructionRESERVED,

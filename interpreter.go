@@ -38,11 +38,14 @@ var (
 	ErrInterpreterWitnessMalleated                   = errors.New("interpreter: witness malleated")
 	ErrInterpreterCleanStack                         = errors.New("interpreter: clean stack")
 	ErrInterpreterWitnessUnexpected                  = errors.New("interpreter: wintess unexpected")
+	ErrInterpreterScriptPubekyesPerMultisig          = errors.New("interpreter: too many multisig")
+	ErrInterpreterSignatureNullDummy                 = errors.New("interpreter: siganture null dummy")
 )
 
 const (
-	MaxInterpreterScriptSize = 1000
-	MaxIntrepreterScriptOPS  = 210
+	MaxInterpreterScriptSize                = 1000
+	MaxInterpreterScriptOPS                 = 210
+	MaxInterpreterScriptPubekyesPerMultisig = 20
 )
 
 type Interpreter struct {
@@ -163,6 +166,11 @@ func verifyWitnessProgramm(
 	}
 
 	return nil
+}
+
+func EvalScript(script *Script, flag Flag, checker Checker) error {
+	interpreter := NewInterpreter()
+	return interpreter.Eval(script, flag, checker, SignatureVersionBase)
 }
 
 func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, flag Flag, checker Checker, sigversion SignatureVersion) error {
@@ -319,7 +327,7 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 		opcode := ins.OPCode
 		if opcode.IsCountable() {
 			nop++
-			if nop > MaxIntrepreterScriptOPS {
+			if nop > MaxInterpreterScriptOPS {
 				return ErrInterpreterScriptOPCount
 			}
 		}
