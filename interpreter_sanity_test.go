@@ -160,10 +160,7 @@ func TestInterpreter(t *testing.T) {
 			if err != nil {
 				continue
 			}
-			fmt.Println(sigScript, "qq", pubkeyScript)
-			fmt.Println(scriptSigStr, scriptPubKeyStr, "shit")
-			fmt.Println(err, scriptErrStr, "fuck")
-			t.Fatal("fuck")
+			t.Fatal("bad script", test)
 		}
 	}
 }
@@ -200,8 +197,6 @@ func parseScript(str string) (*Script, error) {
 		}
 		b = append(b, "OP_"+s)
 	}
-
-	fmt.Println(b)
 
 	return NewScriptFromString(strings.Join(b, " "))
 }

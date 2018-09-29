@@ -3669,10 +3669,10 @@
     ],
     [
         "1",
-        "IF 0x50 ENDIF 1",
+        "IF VERIF ENDIF 1",
         "P2SH,STRICTENC",
-        "OK",
-        "0x50 is reserved"
+        "BAD_OPCODE",
+        "VERIF is reserved"
     ],
     [
         "0x52",
@@ -3699,7 +3699,7 @@
         "0",
         "IF VERIF ELSE 1 ENDIF",
         "P2SH,STRICTENC",
-        "OK",
+        "BAD_OPCODE",
         "VERIF illegal everywhere"
     ],
     [
@@ -4503,34 +4503,15 @@
         "Discouraged NOP10 in redeemScript"
     ],
     [
-        "0x50",
+        "VERIF",
         "1",
         "P2SH,STRICTENC",
         "BAD_OPCODE",
-        "opcode 0x50 is reserved"
-    ],
-    [
-        "1",
-        "IF 0xba ELSE 1 ENDIF",
-        "P2SH,STRICTENC",
-        "BAD_OPCODE",
-        "opcodes above NOP10 invalid if executed"
+        "opcode VERIF is reserved"
     ],
     [
         "1",
         "IF 0xbb ELSE 1 ENDIF",
-        "P2SH,STRICTENC",
-        "BAD_OPCODE"
-    ],
-    [
-        "1",
-        "IF 0xbc ELSE 1 ENDIF",
-        "P2SH,STRICTENC",
-        "BAD_OPCODE"
-    ],
-    [
-        "1",
-        "IF 0xbd ELSE 1 ENDIF",
         "P2SH,STRICTENC",
         "BAD_OPCODE"
     ],

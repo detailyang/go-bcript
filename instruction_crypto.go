@@ -111,12 +111,12 @@ func instructionCHECKSIG(ctx *InterpreterContext) error {
 
 	pubkey := d1.Bytes()
 	sig := d2.Bytes()
-	hashtype := sig[len(sig)-1]
-
 	if len(sig) < 1 {
 		i.dstack.Push(Boolean(false).Bytes())
 		return nil
 	}
+
+	hashtype := sig[len(sig)-1]
 
 	if err := CheckHashTypeEncoding(hashtype, flag); err != nil {
 		return err

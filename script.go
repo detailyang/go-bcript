@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -67,7 +66,6 @@ func NewScriptFromString(src string) (*Script, error) {
 				return nil, ErrScriptBadTypeCast
 			}
 			script.PushOPCode(opcode)
-			fmt.Println(opcode)
 
 			if OP_PUSHBYTES_1 <= opcode && opcode <= OP_PUSHDATA4 {
 				needPushSize = false

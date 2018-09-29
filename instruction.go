@@ -17,6 +17,14 @@ type Instruction struct {
 	Data   []byte
 }
 
+func (ins *Instruction) IsIllegal() bool {
+	if ins.OPCode == OP_VERIF || ins.OPCode == OP_VERNOTIF {
+		return true
+	}
+
+	return false
+}
+
 func (ins *Instruction) IsConditional() bool {
 	if ins.OPCode == OP_IF || ins.OPCode == OP_NOTIF || ins.OPCode == OP_ELSE ||
 		ins.OPCode == OP_ENDIF {

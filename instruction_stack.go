@@ -204,10 +204,10 @@ func instructionSWAP(ctx *InterpreterContext) error {
 }
 
 func instructionTUCK(ctx *InterpreterContext) error {
-	d, err := ctx.i.dstack.Peek(-1)
+	d2, err := ctx.i.dstack.Peek(-2)
 	if err != nil {
 		return err
 	}
 
-	return ctx.i.dstack.InsertBefore(0, d)
+	return ctx.i.dstack.InsertBefore(-2, d2)
 }

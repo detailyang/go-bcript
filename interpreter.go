@@ -22,6 +22,7 @@ var (
 	ErrInterpreterStackSizeNotEnough                 = errors.New("interpreter: stack not enough")
 	ErrInterpreterNoMatchConditional                 = errors.New("interpreter: no match conditional")
 	ErrInterpreterBadOPCode                          = errors.New("interpreter: bad opcode")
+	ErrInterpreterIllegalOPCode                      = errors.New("interpreter: illegal opcode")
 	ErrInterpreterStackOverflow                      = errors.New("interpreter: data stack overflow")
 	ErrInterpreterUnbalancedConditional              = errors.New("interpreter: unbalanced conditional")
 	ErrInterpreterDisabledOPCode                     = errors.New("interpreter: disabled opcode")
@@ -203,6 +204,8 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 		stackCopy = stack.Clone()
 	}
 
+	interpreter.astack.Clean()
+
 	err = interpreter.Eval(scriptPubkey, flag, checker, sigversion)
 	if err != nil {
 		return err
@@ -356,6 +359,10 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 
 		if !flag.Has(ScriptSkipDisabledOPCode) && opcode.IsDisabled() {
 			return ErrInterpreterDisabledOPCode
+		}
+
+		if ins.IsIllegal() {
+			return ErrInterpreterIllegalOPCode
 		}
 
 		if i.shouldSkip() && !ins.IsConditional() {

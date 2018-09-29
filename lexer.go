@@ -171,6 +171,22 @@ func (l *Lexer) scanHexstring() (*Token, error) {
 		return nil, ErrLexerNotHexString
 	}
 
+	// strict encoding
+	if len(hexstring) <= 4 {
+		code, err := strconv.ParseInt(hexstring[2:], 16, 10)
+		if err == nil {
+			opcode, err := NewOPCode(uint8(code))
+			if err != nil {
+				return nil, err
+			}
+			return &Token{
+				value: opcode,
+				raw:   hexstring,
+				kind:  TOKEN_CODE,
+			}, nil
+		}
+	}
+
 	d, err := hex.DecodeString(hexstring[2:])
 	if err != nil {
 		return nil, ErrLexerInvalidHexString
