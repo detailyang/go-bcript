@@ -44,6 +44,7 @@ var (
 	ErrInterpreterSigantureHighS                     = errors.New("interpreter: signature invalid high s")
 	ErrInterpreterBadSignatureHashType               = errors.New("interpreter: bad signature hash type")
 	ErrInterpreterBadPubkey                          = errors.New("interpreter: bad public key")
+	ErrInterpreterEvalFalse                          = errors.New("interpreter: eval false")
 )
 
 const (
@@ -194,13 +195,26 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 		return err
 	}
 
-	if flag.Has(ScriptVerfiyP2SH) {
+	if flag.Has(ScriptVerifyP2SH) {
 		stackCopy = stack.Clone()
 	}
 
 	err = interpreter.Eval(scriptPubkey, flag, checker, sigversion)
 	if err != nil {
 		return err
+	}
+
+	if interpreter.dstack.Depth() == 0 {
+		return ErrInterpreterEvalFalse
+	}
+
+	d, err := interpreter.dstack.Peek(-1)
+	if err != nil {
+		return err
+	}
+
+	if d.Boolean() == false {
+		return ErrInterpreterEvalFalse
 	}
 
 	// Verify witness program
@@ -224,7 +238,7 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 		}
 	}
 
-	if flag.Has(ScriptVerfiyP2SH) && scriptPubkey.IsPayToScriptHash() {
+	if flag.Has(ScriptVerifyP2SH) && scriptPubkey.IsPayToScriptHash() {
 		if !scriptSig.IsPushOnly() {
 			return ErrInterpreterSignaturePushOnly
 		}

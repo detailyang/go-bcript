@@ -170,7 +170,7 @@ func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 		return err
 	}
 
-	if n < 0 || n > MaxInterpreterScriptPubekyesPerMultisig {
+	if n <= 0 || n > MaxInterpreterScriptPubekyesPerMultisig {
 		return ErrInterpreterBadInstruction
 	}
 
@@ -192,6 +192,10 @@ func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 	n, err = d.Number(ctx.flag.Has(ScriptVerifyMinimalData), 4)
 	if err != nil {
 		return err
+	}
+
+	if n == 0 {
+		return ErrInterpreterBadInstruction
 	}
 
 	sigs := make([][]byte, n)
@@ -223,7 +227,7 @@ func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 		key := keys[k]
 		sig := sigs[s]
 
-		if err := CheckSignatureEncoding(sig, ctx.flag); err != nil {
+		if err := CheckSignatureEncoding(sig, ctx.flag, ctx.sigver); err != nil {
 			return err
 		}
 

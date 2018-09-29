@@ -3,6 +3,8 @@ package bscript
 type Flag uint32
 
 const (
+	ScriptVerifyNone = 0
+
 	// ScriptBip16 defines whether the bip16 threshold has passed and thus
 	// pay-to-script hash transactions will be fully validated.
 	ScriptBip16 Flag = 1 << iota
@@ -83,12 +85,16 @@ const (
 
 	// ScriptEnableSigHashForkId makes signature using SIGHASH_FORKID
 	ScriptEnableSigHashForkId
-
-	ScriptVerfiyP2SH
+	ScriptVerifyP2SH
+	ScriptVerifyCompressedPubkeyType
+	ScriptEnableSigHashForkID
+	ScriptEnableReplayProtection
+	ScriptEnableMonolithOpcodes
 )
 
-func (f *Flag) Enable(mask Flag) {
+func (f *Flag) Enable(mask Flag) *Flag {
 	*f |= mask
+	return f
 }
 
 func (f Flag) Has(mask Flag) bool {
