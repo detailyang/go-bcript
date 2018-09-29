@@ -43,6 +43,7 @@ var (
 	ErrInterpreterBadSignatureDer                    = errors.New("interpreter: bad signature der format")
 	ErrInterpreterSigantureHighS                     = errors.New("interpreter: signature invalid high s")
 	ErrInterpreterBadSignatureHashType               = errors.New("interpreter: bad signature hash type")
+	ErrInterpreterBadPubkey                          = errors.New("interpreter: bad public key")
 )
 
 const (

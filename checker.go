@@ -22,6 +22,10 @@ func CheckHashTypeEncoding(hashtype byte, flag Flag) error {
 }
 
 func CheckPubkeyEncoding(pubkey []byte, flag Flag) error {
+	if flag.Has(ScriptVerifyStrictEncoding) && !isPubKey(pubkey) {
+		return ErrInterpreterBadPubkey
+	}
+
 	return nil
 }
 
@@ -165,6 +169,21 @@ func isDefinedHashtypeSiganture(sigver SignatureVersion, sig []byte) bool {
 		return true
 	default:
 		return false
+	}
+
+	return false
+}
+
+func isPubKey(pubkey []byte) bool {
+	switch len(pubkey) {
+	case 33:
+		if pubkey[0] == 2 || pubkey[0] == 3 {
+			return true
+		}
+	case 65:
+		if pubkey[0] == 4 {
+			return true
+		}
 	}
 
 	return false
