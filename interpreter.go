@@ -40,6 +40,9 @@ var (
 	ErrInterpreterWitnessUnexpected                  = errors.New("interpreter: wintess unexpected")
 	ErrInterpreterScriptPubekyesPerMultisig          = errors.New("interpreter: too many multisig")
 	ErrInterpreterSignatureNullDummy                 = errors.New("interpreter: siganture null dummy")
+	ErrInterpreterBadSignatureDer                    = errors.New("interpreter: bad signature der format")
+	ErrInterpreterSigantureHighS                     = errors.New("interpreter: signature invalid high s")
+	ErrInterpreterBadSignatureHashType               = errors.New("interpreter: bad signature hash type")
 )
 
 const (

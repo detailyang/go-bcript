@@ -126,7 +126,7 @@ func instructionCHECKSIG(ctx *InterpreterContext) error {
 		return err
 	}
 
-	if err := CheckSignatureEncoding(sig, flag); err != nil {
+	if err := CheckSignatureEncoding(sig, flag, sigver); err != nil {
 		return err
 	}
 
