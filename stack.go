@@ -2,6 +2,7 @@ package bscript
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
@@ -197,4 +198,21 @@ func (s *Stack) Clone() *Stack {
 	return &Stack{
 		data: data,
 	}
+}
+
+func (s *Stack) String() string {
+	var result string
+
+	if len(s.data) == 0 {
+		result += " <empty> "
+	}
+	for _, stack := range s.data {
+		if len(stack) == 0 {
+			result += " <empty> "
+		} else {
+			result += fmt.Sprintf(" <%x> ", stack)
+		}
+	}
+
+	return result
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/detailyang/go-bscript"
 )
@@ -16,12 +15,15 @@ func main() {
 		panic(err)
 	}
 
+	var flag bscript.Flag
+	flag.Enable(bscript.ScriptSkipDisabledOPCode).
+		Enable(bscript.ScriptEnableTrace)
+
 	interpreter := bscript.NewInterpreter()
-	err = interpreter.Eval(script, bscript.ScriptSkipDisabledOPCode, bscript.NewNoopChecker(), bscript.SignatureVersionBase)
+	err = interpreter.Eval(script, flag, bscript.NewNoopChecker(), bscript.SignatureVersionBase)
 	if err != nil {
 		panic(err)
 	}
 
-	dstack := interpreter.GetDStack()
-	fmt.Println(dstack)
+	interpreter.PrintTraces()
 }

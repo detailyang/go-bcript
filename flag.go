@@ -90,6 +90,8 @@ const (
 	ScriptEnableSigHashForkID
 	ScriptEnableReplayProtection
 	ScriptEnableMonolithOpcodes
+
+	ScriptEnableTrace
 )
 
 func (f *Flag) Enable(mask Flag) *Flag {

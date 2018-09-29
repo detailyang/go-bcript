@@ -3,6 +3,9 @@ package bscript
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
+	"text/tabwriter"
 
 	. "github.com/detailyang/go-bprimitives"
 )
@@ -59,6 +62,7 @@ type Interpreter struct {
 	cstack  []int
 	pc      int
 	codesep int
+	traces  []Trace
 }
 
 type InterpreterContext struct {
@@ -371,6 +375,16 @@ func (i *Interpreter) Eval(script *Script, flag Flag, checker Checker, sigversio
 		if i.dstack.Depth()+i.astack.Depth() > 1000 {
 			return ErrInterpreterStackOverflow
 		}
+
+		if flag.Has(ScriptEnableTrace) {
+			trace := Trace{
+				Step:      i.pc,
+				Executed:  ins.OPCode.String(),
+				Stack:     i.dstack.String(),
+				Remaining: script.Disassemble(" "),
+			}
+			i.traces = append(i.traces, trace)
+		}
 	}
 
 	if len(i.cstack) > 0 {
@@ -386,4 +400,17 @@ func (i *Interpreter) shouldSkip() bool {
 	}
 
 	return i.cstack[len(i.cstack)-1] != OpCondTrue
+}
+
+func (i *Interpreter) PrintTraces() {
+	const padding = 3
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', tabwriter.Debug)
+	for i, trace := range i.traces {
+		if i == 0 {
+			fmt.Fprintln(w, "\n#Step\tExecuted OP Code\tResulted Stack\tRemaining OP Codes\t")
+		}
+		row := fmt.Sprintf("%04d\t%s\t%s\t%s\t", trace.Step, trace.Executed, trace.Stack, trace.Remaining)
+		fmt.Fprintln(w, row)
+	}
+	w.Flush()
 }

@@ -378,6 +378,11 @@ func (s *Script) Next() (*Instruction, error) {
 	return nil, ErrScriptBadInstruction
 }
 
+func (s *Script) Disassemble(sep string) string {
+	dis, _ := NewDisassembler().Disassemble(s, sep)
+	return dis
+}
+
 func (s *Script) Reset() {
 	s.Pos = 0
 }

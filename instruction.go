@@ -28,7 +28,7 @@ func (ins *Instruction) IsConditional() bool {
 
 func (ins *Instruction) String() string {
 	rv := make([]string, 0, 36)
-	rv = append(rv, fmt.Sprintf("%-16s", ins.OPCode))
+	rv = append(rv, fmt.Sprintf("%-8s", ins.OPCode))
 
 	switch ins.OPCode {
 	case OP_PUSHDATA1:
