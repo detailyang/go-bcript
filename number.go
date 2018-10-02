@@ -115,7 +115,7 @@ func isMinimallyEncode(d []byte) bool {
 //    -32768 -> [0x00 0x80 0x80]
 func (n Number) Bytes() []byte {
 	if n == 0 {
-		return []byte{}
+		return []byte{0x00}
 	}
 
 	absn := n

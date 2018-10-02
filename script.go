@@ -191,6 +191,8 @@ func (s *Script) PushBytesWithOP(b []byte) *Script {
 	size := len(b)
 
 	switch {
+	case size <= int(OP_PUSHDATA1):
+		s.PushBytes([]byte{byte(size)})
 	case size <= math.MaxInt8:
 		s.PushOPCode(OP_PUSHDATA1)
 		s.PushBytes([]byte{byte(size)})
@@ -395,6 +397,10 @@ func (s *Script) Size() int {
 	return len(s.Data)
 }
 
+func (s *Script) Hex() string {
+	return hex.EncodeToString(s.Data[s.Pos:])
+}
+
 func (s *Script) String() string {
-	return ""
+	return s.Hex()
 }

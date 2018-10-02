@@ -104,7 +104,6 @@ func TestInterpreter(t *testing.T) {
 			}
 
 			amount = int64(witnessData[len(witnessData)-1].(float64) * 1e8)
-			// fmt.Println(witness, "abcd", amount)
 			_ = amount
 			_ = witness
 		}

@@ -83,10 +83,9 @@ const (
 	// non-standard.
 	ScriptVerifyWitnessPubKeyType
 
-	// ScriptEnableSigHashForkId makes signature using SIGHASH_FORKID
-	ScriptEnableSigHashForkId
 	ScriptVerifyP2SH
 	ScriptVerifyCompressedPubkeyType
+	// ScriptEnableSigHashForkId makes signature using SIGHASH_FORKID
 	ScriptEnableSigHashForkID
 	ScriptEnableReplayProtection
 	ScriptEnableMonolithOpcodes
@@ -94,9 +93,13 @@ const (
 	ScriptEnableTrace
 )
 
-func (f *Flag) Enable(mask Flag) *Flag {
+func NewFlag() Flag {
+	return Flag(0)
+}
+
+func (f *Flag) Enable(mask Flag) Flag {
 	*f |= mask
-	return f
+	return *f
 }
 
 func (f Flag) Has(mask Flag) bool {

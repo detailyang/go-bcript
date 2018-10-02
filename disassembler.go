@@ -14,6 +14,10 @@ func NewDisassembler() *Disassembler {
 
 func (d *Disassembler) Disassemble(script *Script, sep string) (string, error) {
 	tmp := script.Pos
+	script.Pos = 0
+	defer func() {
+		script.Pos = tmp
+	}()
 
 	rv := make([]string, 0, 64)
 	for {
@@ -27,8 +31,6 @@ func (d *Disassembler) Disassemble(script *Script, sep string) (string, error) {
 
 		rv = append(rv, fmt.Sprintf("%s", ins))
 	}
-
-	script.Pos = tmp
 
 	return strings.Join(rv, sep), nil
 }
