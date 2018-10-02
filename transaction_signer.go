@@ -43,6 +43,11 @@ func NewSigHash(s uint32) SigHash {
 	return SigHash(s)
 }
 
+func (s *SigHash) Enable(flag SigHash) SigHash {
+	*s = *s | flag
+	return *s
+}
+
 func (s SigHash) Has(flag SigHash) bool {
 	return (s & flag) == flag
 }

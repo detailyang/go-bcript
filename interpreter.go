@@ -195,6 +195,9 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 	hadWitness := false
 	cleanStack := flag.Has(ScriptVerifyCleanStack)
 
+	fmt.Println("unlocking", scriptSig.String())
+	fmt.Println("locking", scriptPubkey.String())
+
 	err := interpreter.Eval(scriptSig, flag, checker, sigversion)
 	if err != nil {
 		return err

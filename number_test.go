@@ -43,7 +43,7 @@ func TestScriptNumBytes(t *testing.T) {
 		num        Number
 		serialized []byte
 	}{
-		{0, nil},
+		{0, []byte{0x00}},
 		{1, hexToBytes("01")},
 		{-1, hexToBytes("81")},
 		{127, hexToBytes("7f")},

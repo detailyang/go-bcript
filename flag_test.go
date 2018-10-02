@@ -1,6 +1,8 @@
 package bscript
 
 import (
+	"bytes"
+	"encoding/hex"
 	"testing"
 
 	"github.com/detailyang/go-bcore"
@@ -72,7 +74,7 @@ func NewTestBuilder(script *Script, comment string, flag Flag, P2SH bool, amount
 	if P2SH {
 		redeemscript = scriptPubkey
 		scriptPubkey = NewScript().PushOPCode(OP_HASH160).
-			PushBytes(Hash160(redeemscript.Bytes())).
+			PushBytesWithOP(Hash160(redeemscript.Bytes())).
 			PushOPCode(OP_EQUAL)
 	}
 
@@ -86,6 +88,7 @@ func NewTestBuilder(script *Script, comment string, flag Flag, P2SH bool, amount
 		amount:       amount,
 		flag:         flag,
 		script:       script,
+		comment:      comment,
 		redeemscript: redeemscript,
 	}
 }
@@ -138,6 +141,14 @@ func negateSigantureS(sig []byte) []byte {
 	return newsig
 }
 
+func (tb *TestBuilder) Num(n int) *TestBuilder {
+	tb.DoPush()
+	tb.spendTx.Inputs[0].ScriptSig = NewScriptFromBytes(
+		tb.spendTx.Inputs[0].ScriptSig,
+	).PushNumber(Number(n)).Bytes()
+	return tb
+}
+
 func (tb *TestBuilder) Push(publickey *bcrypto.PublicKey) *TestBuilder {
 	tb.DoPushBytes(publickey.Bytes())
 	return tb
@@ -152,10 +163,32 @@ func (tb *TestBuilder) DoPush() {
 	}
 }
 
+func (tb *TestBuilder) EditPush(pos int, hexin, hexout string) *TestBuilder {
+	datain, _ := hex.DecodeString(hexin)
+	dataout, _ := hex.DecodeString(hexout)
+
+	if !bytes.Equal(tb.push[pos:pos+len(datain)], datain) {
+		panic(tb.comment)
+	}
+
+	left := tb.push[:pos]
+	right := tb.push[pos+len(datain):]
+
+	tb.push = append(left, dataout...)
+	tb.push = append(tb.push, right...)
+
+	return tb
+}
+
 func (tb *TestBuilder) DoPushBytes(data []byte) {
 	tb.DoPush()
 	tb.push = data
 	tb.havePush = true
+}
+
+func (tb *TestBuilder) PushRedeem() *TestBuilder {
+	tb.DoPushBytes(tb.redeemscript.Bytes())
+	return tb
 }
 
 func (tb *TestBuilder) PushSig(
@@ -207,7 +240,7 @@ func DoTest(
 	)
 
 	if err != scriptError {
-		t.Errorf("got %s, expect %s", err, message)
+		t.Errorf("%s - got %s", message, err)
 	}
 }
 
@@ -257,18 +290,19 @@ var (
 
 func TestScriptFlag(t *testing.T) {
 	key0 := bcrypto.NewKey(key0bytes[:], false)
-	// key0c := bcrypto.NewKey(key0bytes[:], true)
+	key0c := bcrypto.NewKey(key0bytes[:], true)
 	pubkey0, _ := key0.GetPubkey()
+	pubkey0c, _ := key0c.GetPubkey()
 
 	key1 := bcrypto.NewKey(key1bytes[:], false)
-	// key1c := bcrypto.NewKey(key1bytes[:], true)
-	// pubkey1, _ := key1.GetPubkey()
-	pubkey1c, _ := key1.GetPubkey()
+	key1c := bcrypto.NewKey(key1bytes[:], true)
+	pubkey1, _ := key1.GetPubkey()
+	pubkey1c, _ := key1c.GetPubkey()
 
 	key2 := bcrypto.NewKey(key2bytes[:], false)
-	// key2c := bcrypto.NewKey(key2bytes[:], true)
+	key2c := bcrypto.NewKey(key2bytes[:], true)
 	// pubkey2, _ := key1.GetPubkey()
-	pubkey2c, _ := key2.GetPubkey()
+	pubkey2c, _ := key2c.GetPubkey()
 
 	var flag Flag
 	flag.Enable(ScriptEnableSigHashForkID)
@@ -317,8 +351,122 @@ func TestScriptFlag(t *testing.T) {
 	).PushSig(key2, SigHashAll, 32, 32, 0, flag).Push(&pubkey2c).
 		DamagePush(5).ScriptError(ErrInterpreterVerifyFailed))
 
-	for _, test := range tests {
-		test.Test(t)
-	}
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2PK anyonecanpy",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll.Enable(SigHashAnyoneCanPay), 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2PK anyonecanpy marked with normal hashtyp",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll.Enable(SigHashAnyoneCanPay), 32, 32, 0, flag).
+		EditPush(70, "81", "01").ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK)",
+		ScriptVerifyP2SH,
+		true,
+		0).PushSig(key0, SigHashAll, 32, 32, 0, flag).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK)",
+		ScriptVerifyP2SH,
+		true,
+		0).PushSig(key0, SigHashAll, 32, 32, 0, flag).PushRedeem().DamagePush(10).
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_DUP).PushOPCode(OP_HASH160).
+			PushBytesWithOP(pubkey0.ID()).PushOPCode(OP_EQUALVERIFY).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK)",
+		ScriptVerifyP2SH,
+		true,
+		0).PushSig(key0, SigHashAll, 32, 32, 0, flag).Push(&pubkey0).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_DUP).PushOPCode(OP_HASH160).
+			PushBytesWithOP(pubkey1.ID()).PushOPCode(OP_EQUALVERIFY).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK), bad sig but no VERIFY_P2SH",
+		0,
+		true,
+		0).PushSig(key0, SigHashAll, 32, 32, 0, flag).DamagePush(10).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_DUP).PushOPCode(OP_HASH160).
+			PushBytesWithOP(pubkey1.ID()).PushOPCode(OP_EQUALVERIFY).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK), bad sig",
+		ScriptVerifyP2SH,
+		true,
+		0).PushSig(key0, SigHashAll, 32, 32, 0, flag).DamagePush(10).PushRedeem().
+		ScriptError(ErrInterpreterVerifyFailed))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG),
+		"3-of-3",
+		0,
+		false,
+		0,
+	).Num(0).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG),
+		"3-of-3, 2 sigs",
+		0,
+		false,
+		0,
+	).Num(0).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).
+			PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_3).
+			PushOPCode(OP_CHECKMULTISIG),
+		"P2SH(2-of-3)",
+		ScriptVerifyP2SH,
+		true,
+		0,
+	).Num(0).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).
+			PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_3).
+			PushOPCode(OP_CHECKMULTISIG),
+		"P2SH(2-of-3), 1 sig",
+		ScriptVerifyP2SH,
+		true,
+		0,
+	).Num(0).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		Num(0).
+		PushRedeem().
+		ScriptError(ErrTransactionSignerEmptySignature))
+
+	// for _, test := range tests {
+	tests[len(tests)-1].Test(t)
+	// }
 
 }
