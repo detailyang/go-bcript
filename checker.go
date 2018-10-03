@@ -1,6 +1,8 @@
 package bscript
 
-import "math/bits"
+import (
+	"github.com/detailyang/go-bcrypto"
+)
 
 type Checker interface {
 	CheckLockTime(locktime uint32) error
@@ -34,9 +36,9 @@ func CheckSignatureEncoding(sig []byte, flag Flag, sigver SignatureVersion) erro
 		return nil
 	}
 
-	if flag.Has(ScriptVerifyDERSignatures) ||
+	if (flag.Has(ScriptVerifyDERSignatures) ||
 		flag.Has(ScriptVerifyLowS) ||
-		flag.Has(ScriptVerifyStrictEncoding) ||
+		flag.Has(ScriptVerifyStrictEncoding)) &&
 		!isValidSignatureEncoding(sig) {
 		return ErrInterpreterBadSignatureDer
 	}
@@ -79,9 +81,9 @@ func isValidSignatureEncoding(sig []byte) bool {
 	// * S: arbitrary-length big-endian encoded S value. The same rules apply.
 	// * sighash: 1-byte value indicating what data is hashed (not part of the DER
 	//   signature)
-	if len(sig) < 9 || len(sig) > 73 {
-		return false
-	}
+	// if len(sig) < 9 || len(sig) > 73 {
+	// 	return false
+	// }
 
 	if sig[0] != 0x30 {
 		return false
@@ -114,7 +116,7 @@ func isValidSignatureEncoding(sig []byte) bool {
 		return false
 	}
 
-	if nr > 1 && sig[4] == 0 && (sig[5]&0x80 == 0x80) {
+	if nr > 1 && sig[4] == 0 && (sig[5]&0x80 != 0x80) {
 		return false
 	}
 
@@ -130,7 +132,7 @@ func isValidSignatureEncoding(sig []byte) bool {
 		return false
 	}
 
-	if ns > 1 && (sig[nr+6] == 0) && (sig[nr+7]&0x80) == 0 {
+	if ns > 1 && (sig[nr+6] == 0) && (sig[nr+7]&0x80 != 0x80) {
 		return false
 	}
 
@@ -142,9 +144,7 @@ func isLowDerSignature(sig []byte) bool {
 		return false
 	}
 
-	// TODO: check low s
-
-	return true
+	return bcrypto.CheckLowS(sig)
 }
 
 func isDefinedHashtypeSiganture(sigver SignatureVersion, sig []byte) bool {
@@ -152,12 +152,12 @@ func isDefinedHashtypeSiganture(sigver SignatureVersion, sig []byte) bool {
 		return false
 	}
 
-	u := uint(len(sig))
+	u := uint8(sig[len(sig)-1])
 	switch sigver {
 	case SignatureVersionForkId:
-		u = u & bits.Reverse(0x40|0x80)
+		u = u & uint8(^(0x40|0x80)&0xFF)
 	default:
-		u = u & bits.Reverse(0x80)
+		u = u & uint8(^0x80&0xFF)
 	}
 
 	switch u {

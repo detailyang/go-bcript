@@ -49,6 +49,7 @@ var (
 	ErrInterpreterBadSignatureHashType               = errors.New("interpreter: bad signature hash type")
 	ErrInterpreterBadPubkey                          = errors.New("interpreter: bad public key")
 	ErrInterpreterEvalFalse                          = errors.New("interpreter: eval false")
+	ErrInterpreterSignatureNullFail                  = errors.New("interpreter: null fail siganture")
 )
 
 const (
@@ -271,6 +272,19 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 		err = interpreter.Eval(pubkey, flag, checker, sigversion)
 		if err != nil {
 			return err
+		}
+
+		if interpreter.dstack.Depth() == 0 {
+			return ErrInterpreterEvalFalse
+		}
+
+		d, err = interpreter.dstack.Peek(-1)
+		if err != nil {
+			return err
+		}
+
+		if d.Boolean() == false {
+			return ErrInterpreterEvalFalse
 		}
 
 		if flag.Has(ScriptVerifyWitness) {

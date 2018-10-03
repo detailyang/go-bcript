@@ -350,17 +350,8 @@ func (ts *TransactionSigner) CheckSignature(sig, pubkey []byte, script *Script, 
 		hash = ts.signatureHashForkId(script, sighash)
 	}
 
-	pk, err := bcrypto.NewPubkeyFromBytes(pubkey)
-	if err != nil {
-		return err
-	}
-
-	signature, err := bcrypto.NewSignatureFromBytes(sig)
-	if err != nil {
-		return err
-	}
-
-	ok := signature.Verify(hash.Bytes(), pk)
+	pk := bcrypto.NewPublicKey(pubkey)
+	ok := pk.Verify(hash.Bytes(), sig)
 	if !ok {
 		return ErrTransactionSignerVerifySignatureFailed
 	}

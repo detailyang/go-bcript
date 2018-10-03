@@ -58,6 +58,10 @@ const (
 	// a CHECKSIG or CHECKMULTISIG operation fails.
 	ScriptVerifyNullFail
 
+	// verify dummy stack item consumed by CHECKMULTISIG is of zero-length
+	// (softfork safe, BIP62 rule 7).
+	ScriptVerifyNullDummy
+
 	// ScriptVerifySigPushOnly defines that signature scripts must contain
 	// only pushed data.  This is rule 2 of BIP0062.
 	ScriptVerifySigPushOnly

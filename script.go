@@ -231,6 +231,18 @@ func (s *Script) PushOPCode(opcode OPCode) *Script {
 	return s
 }
 
+func (s *Script) PushInt64(n int64) *Script {
+	if n == -1 || n >= 1 && n <= 16 {
+		s.Data = append(s.Data, byte(n)+byte(OP_1)-1)
+	} else if n == 0 {
+		s.Data = append(s.Data, byte(OP_0))
+	} else {
+		return s.PushNumber(Number(n))
+	}
+
+	return s
+}
+
 func (s *Script) PushNumber(n Number) *Script {
 	s.Data = append(s.Data, n.Bytes()...)
 	return s

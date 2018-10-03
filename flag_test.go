@@ -3,6 +3,7 @@ package bscript
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/detailyang/go-bcore"
@@ -131,10 +132,10 @@ func negateSigantureS(sig []byte) []byte {
 	newsig := make([]byte, 0, len(sig))
 	newsig = append(newsig, 0x30)
 	newsig = append(newsig, byte(4+len(r)+len(s)))
-	newsig = append(newsig, 0x20)
+	newsig = append(newsig, 0x02)
 	newsig = append(newsig, byte(len(r)))
 	newsig = append(newsig, r...)
-	newsig = append(newsig, 0x20)
+	newsig = append(newsig, 0x02)
 	newsig = append(newsig, byte(len(s)))
 	newsig = append(newsig, s...)
 
@@ -145,8 +146,21 @@ func (tb *TestBuilder) Num(n int) *TestBuilder {
 	tb.DoPush()
 	tb.spendTx.Inputs[0].ScriptSig = NewScriptFromBytes(
 		tb.spendTx.Inputs[0].ScriptSig,
-	).PushNumber(Number(n)).Bytes()
+	).PushInt64(int64(n)).Bytes()
 	return tb
+}
+
+func (tb *TestBuilder) PushPubkey(pubkey *bcrypto.PublicKey) *TestBuilder {
+	return tb.DoPushBytes(pubkey.Bytes())
+}
+
+func (tb *TestBuilder) PushHex(hexstring string) *TestBuilder {
+	data, err := hex.DecodeString(hexstring)
+	if err != nil {
+		panic(err)
+	}
+
+	return tb.DoPushBytes(data)
 }
 
 func (tb *TestBuilder) Push(publickey *bcrypto.PublicKey) *TestBuilder {
@@ -171,19 +185,29 @@ func (tb *TestBuilder) EditPush(pos int, hexin, hexout string) *TestBuilder {
 		panic(tb.comment)
 	}
 
-	left := tb.push[:pos]
-	right := tb.push[pos+len(datain):]
+	left := clone(tb.push[:pos])
+	right := clone(tb.push[pos+len(datain):])
 
 	tb.push = append(left, dataout...)
 	tb.push = append(tb.push, right...)
+	fmt.Println(hex.EncodeToString(tb.push))
 
 	return tb
 }
 
-func (tb *TestBuilder) DoPushBytes(data []byte) {
+func (tb *TestBuilder) Add(script *Script) *TestBuilder {
+	tb.DoPush()
+	tb.spendTx.Inputs[0].ScriptSig = NewScriptFromBytes(tb.spendTx.Inputs[0].ScriptSig).
+		PushBytesWithOP(script.Bytes()).Bytes()
+	return tb
+}
+
+func (tb *TestBuilder) DoPushBytes(data []byte) *TestBuilder {
 	tb.DoPush()
 	tb.push = data
 	tb.havePush = true
+
+	return tb
 }
 
 func (tb *TestBuilder) PushRedeem() *TestBuilder {
@@ -200,8 +224,10 @@ func (tb *TestBuilder) PushSig(
 ) *TestBuilder {
 	ts := NewTransactionSigner(tb.spendTx, 0, amount)
 	hash := ts.signatureHashOriginal(tb.script, sigHash)
-	sig := tb.DoSign(key, hash, 32, 32)
+	sig := tb.DoSign(key, hash, nr, ns)
 	sig = append(sig, byte(sigHash))
+
+	fmt.Println("mysig", hex.EncodeToString(sig))
 
 	tb.DoPushBytes(sig)
 
@@ -262,6 +288,7 @@ func (tb *TestBuilder) DoSign(key *bcrypto.Key, hash Hash, nr, ns int) []byte {
 
 	for i := 0; ; i++ {
 		sig, _ = key.Signature(hash.Bytes(), uint32(i))
+
 		if (ns == 33) != (sig[5]+sig[3] == 33) {
 			sig = negateSigantureS(sig)
 		}
@@ -292,6 +319,8 @@ func TestScriptFlag(t *testing.T) {
 	key0 := bcrypto.NewKey(key0bytes[:], false)
 	key0c := bcrypto.NewKey(key0bytes[:], true)
 	pubkey0, _ := key0.GetPubkey()
+	pubkey0h, _ := key0.GetPubkey()
+	pubkey0h[0] = 0x06 | (pubkey0h[64] & 1)
 	pubkey0c, _ := key0c.GetPubkey()
 
 	key1 := bcrypto.NewKey(key1bytes[:], false)
@@ -463,10 +492,604 @@ func TestScriptFlag(t *testing.T) {
 		PushSig(key1, SigHashAll, 32, 32, 0, flag).
 		Num(0).
 		PushRedeem().
-		ScriptError(ErrTransactionSignerEmptySignature))
+		ScriptError(ErrInterpreterEvalFalse))
 
-	// for _, test := range tests {
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too much R padding but no DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 31, 32, 0, flag).EditPush(1, "43021F", "44022000"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too much R padding",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 31, 32, 0, flag).EditPush(1, "43021F", "44022000").ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too much s padding but no DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		EditPush(1, "44", "45").
+		EditPush(37, "20", "2100"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too much s padding but no DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		EditPush(1, "44", "45").
+		EditPush(37, "20", "2100").ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too little R padding but no DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with too little R padding but no DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with bad sig with too much R padding but no DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 31, 32, 0, flag).
+		EditPush(1, "43021f", "44022000").
+		DamagePush(10))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with bad sig with too much R padding",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 31, 32, 0, flag).
+		EditPush(1, "43021f", "44022000").
+		DamagePush(10).ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with bad sig with too much R padding but no DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 31, 32, 0, flag).
+		EditPush(1, "43021f", "44022000").
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with bad sig with too much R padding",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 31, 32, 0, flag).
+		EditPush(1, "43021f", "44022000").
+		ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 1, without DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).
+		EditPush(1, "45022100", "440220"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 1, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).
+		EditPush(1, "45022100", "440220").ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 2, without DERSIG",
+		0,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).
+		EditPush(1, "45022100", "440220").ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 2, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).PushSig(key1, SigHashAll, 33, 32, 0, flag).
+		EditPush(1, "45022100", "440220").ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 3, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 3, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 4, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 4, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 4, without DERSIG, non-null DER-compliant signature",
+		0,
+		false,
+		0,
+	).PushHex("300602010102010101"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 4, without DERSIG, non-null DER-compliant signature",
+		ScriptVerifyDERSignatures|ScriptVerifyNullFail,
+		false,
+		0,
+	).Num(0))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 4, with DERSIG, non-null DER-compliant signature",
+		ScriptVerifyDERSignatures|ScriptVerifyNullFail,
+		false,
+		0,
+	).PushHex("300602010102010101").ScriptError(ErrInterpreterSignatureNullFail))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 5, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"BIP66 example 5, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(1).ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 6, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(1))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"BIP66 example 6, without DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(1).ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 7, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		PushSig(key2, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 7, without DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 8, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 8, without DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 9, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).Num(0).PushSig(key2, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 9, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).Num(0).PushSig(key2, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 10, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).Num(0).PushSig(key2, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220"))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 10, without DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).Num(0).PushSig(key2, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").
+		ScriptError(ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 11, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").Num(0).
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG),
+		"BIP66 example 11, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").Num(0).
+		ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 12, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").Num(0))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_2).
+			PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"BIP66 example 12, without DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").Num(0))
+
+	// tests = append(tests, NewTestBuilder(
+	// 	NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+	// 	"P2PK with multi-byte hashtype, without DERSIG",
+	// 	0,
+	// 	false,
+	// 	0,
+	// ).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101"))
+
+	// tests = append(tests, NewTestBuilder(
+	// 	NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+	// 	"P2PK with multi-byte hashtype, with DERSIG",
+	// 	ScriptVerifyDERSignatures,
+	// 	false,
+	// 	0,
+	// ).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101").ScriptError(
+	// 	ErrInterpreterBadSignatureDer))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with high S but no LOW_S",
+		0,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 32, 33, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with high S",
+		ScriptVerifyLowS,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 32, 33, 0, flag).ScriptError(ErrInterpreterSigantureHighS))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with hybrid pubkey but no STRICTENC",
+		0,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with hybrid pubkey",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterBadPubkey))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK with hybrid pubkey but no STRICTENC",
+		0,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK with hybrid pubkey",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterBadPubkey))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK with invalid hybrid pubkey but no STRICTENC",
+		0,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).DamagePush(10))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK with invalid hybrid pubkey",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).DamagePush(10).ScriptError(ErrInterpreterBadPubkey))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_1).PushBytesWithOP(pubkey0h.Bytes()).PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"1-of-2 with the second 1 hybrid pubkey and no STRICTENC",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key0, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_1).PushBytesWithOP(pubkey0h.Bytes()).PushBytesWithOP(pubkey1c.Bytes()).PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"1-of-2 with the second 1 hybrid pubkey",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_1).PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey0h.Bytes()).PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"1-of-2 with the second 1 hybrid pubkey",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 32, 32, 0, flag).ScriptError(ErrInterpreterBadPubkey))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with undefined hashtype but no STRICTENC",
+		0,
+		false,
+		0,
+	).PushSig(key1, NewSigHash(5), 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with undefined hashtype",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key1, NewSigHash(5), 32, 32, 0, flag).ScriptError(ErrInterpreterBadSignatureHashType))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_DUP).PushOPCode(OP_HASH160).
+			PushBytesWithOP(pubkey0.ID()).PushOPCode(OP_EQUALVERIFY).PushOPCode(OP_CHECKSIG),
+		"P2PK with undefined hashtype",
+		0,
+		false,
+		0,
+	).PushSig(key0, NewSigHash(0x21), 32, 32, 0, 0).PushPubkey(&pubkey0))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_DUP).PushOPCode(OP_HASH160).
+			PushBytesWithOP(pubkey0.ID()).PushOPCode(OP_EQUALVERIFY).PushOPCode(OP_CHECKSIG),
+		"P2PK with undefined hashtype",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key0, NewSigHash(0x21), 32, 32, 0, ScriptVerifyStrictEncoding).
+		PushPubkey(&pubkey0).ScriptError(ErrInterpreterBadSignatureHashType))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK) with invalid sighashtype",
+		ScriptVerifyP2SH,
+		true,
+		0,
+	).PushSig(key1, NewSigHash(0x21), 32, 32, 0, flag).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK) with invalid sighashtype",
+		ScriptVerifyP2SH|ScriptVerifyStrictEncoding,
+		true,
+		0,
+	).PushSig(key1, NewSigHash(0x21), 32, 32, 0, flag).PushRedeem().
+		ScriptError(ErrInterpreterBadSignatureHashType))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with invalid sig and undefined hashtype but no STRICTENC",
+		0,
+		false,
+		0,
+	).PushSig(key1, NewSigHash(5), 32, 32, 0, flag).
+		DamagePush(10))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey1.Bytes()).PushOPCode(OP_CHECKSIG).PushOPCode(OP_NOT),
+		"P2PK NOT with invalid sig and undefined hashtype",
+		ScriptVerifyStrictEncoding,
+		false,
+		0,
+	).PushSig(key1, NewSigHash(5), 32, 32, 0, flag).
+		DamagePush(10).ScriptError(ErrInterpreterBadSignatureHashType))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG),
+		"3-of-3 with nonzero dummy but no NULLDUMMY",
+		0,
+		false,
+		0,
+	).Num(1).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG),
+		"3-of-3 with nonzero dummy",
+		ScriptVerifyNullDummy,
+		false,
+		0,
+	).Num(1).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		ScriptError(ErrInterpreterSignatureNullDummy))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"3-of-3 NOT with invalid sig and nonzero dummy but no NULLDUMMY",
+		0,
+		false,
+		0,
+	).Num(1).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		DamagePush(10))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_3).PushBytesWithOP(pubkey0c.Bytes()).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_3).PushOPCode(OP_CHECKMULTISIG).PushOPCode(OP_NOT),
+		"3-of-3 NOT with invalid sig and nonzero dummy but no NULLDUMMY",
+		ScriptVerifyNullDummy,
+		false,
+		0,
+	).Num(1).
+		PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		DamagePush(10).
+		ScriptError(ErrInterpreterSignatureNullDummy))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey1c.Bytes()).
+			PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"2-of-2 with two identical keys and sigs pushed using OP_DUP but no SIGPUSHONLY",
+		0,
+		false,
+		0,
+	).Num(0).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_DUP)))
+
 	tests[len(tests)-1].Test(t)
+	// for _, test := range tests {
+	// 	test.Test(t)
 	// }
 
 }

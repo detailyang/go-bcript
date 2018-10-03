@@ -52,7 +52,13 @@ func instructionCHECKSIG(ctx *InterpreterContext) error {
 		subscript = subscript.Filter(sigscript)
 	}
 
+	fmt.Println("sig", hex.EncodeToString(sig))
+	fmt.Println("pubkey", hex.EncodeToString(pubkey))
+	fmt.Println("subscript", subscript.String())
 	if err := checker.CheckSignature(sig, pubkey, subscript, sigver); err != nil {
+		if flag.Has(ScriptVerifyNullFail) && len(sig) > 0 {
+			return ErrInterpreterSignatureNullFail
+		}
 		i.dstack.Push(Number(0).Bytes())
 	} else {
 		i.dstack.Push(Number(1).Bytes())
@@ -161,7 +167,18 @@ func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 	}
 
 	if ctx.i.dstack.Depth() > 0 && ctx.flag.Has(ScriptVerifyNullFail) {
-		return ErrInterpreterSignatureNullDummy
+		return ErrInterpreterSignatureNullFail
+	}
+
+	if ctx.i.dstack.Depth() < 1 {
+		return ErrInterpreterInvalidStackOperation
+	}
+
+	if ctx.flag.Has(ScriptVerifyNullDummy) {
+		d, _ = ctx.i.dstack.Peek(-1)
+		if d.Size() > 0 {
+			return ErrInterpreterSignatureNullDummy
+		}
 	}
 
 	if success {
