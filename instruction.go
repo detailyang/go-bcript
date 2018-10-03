@@ -273,5 +273,5 @@ var instructionOperator = map[OPCode]Operator{
 }
 
 func instructionRESERVED(ctx *InterpreterContext) error {
-	return ErrInstructionReserved
+	return nil
 }

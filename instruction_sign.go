@@ -1,10 +1,5 @@
 package bscript
 
-import (
-	"encoding/hex"
-	"fmt"
-)
-
 func instructionCHECKSIG(ctx *InterpreterContext) error {
 	script := ctx.script
 	i := ctx.i
@@ -52,10 +47,7 @@ func instructionCHECKSIG(ctx *InterpreterContext) error {
 		subscript = subscript.Filter(sigscript)
 	}
 
-	fmt.Println("sig", hex.EncodeToString(sig))
-	fmt.Println("pubkey", hex.EncodeToString(pubkey))
-	fmt.Println("subscript", subscript.String())
-	if err := checker.CheckSignature(sig, pubkey, subscript, sigver); err != nil {
+	if err := checker.CheckSignature(sig, pubkey, subscript, flag, sigver); err != nil {
 		if flag.Has(ScriptVerifyNullFail) && len(sig) > 0 {
 			return ErrInterpreterSignatureNullFail
 		}
@@ -153,11 +145,7 @@ func instructionCHECKMULTISIG(ctx *InterpreterContext) error {
 			return err
 		}
 
-		fmt.Println("abccsig", hex.EncodeToString(sig))
-		fmt.Println("abcckey", hex.EncodeToString(key))
-		fmt.Println("abccscript", hex.EncodeToString(subscript.Bytes()))
-		err := ctx.checker.CheckSignature(sig, key, subscript, ctx.sigver)
-		fmt.Println(err)
+		err := ctx.checker.CheckSignature(sig, key, subscript, ctx.flag, ctx.sigver)
 		if err == nil {
 			s += 1
 		}

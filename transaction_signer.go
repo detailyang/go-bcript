@@ -28,7 +28,7 @@ import (
 
 type SigHash uint32
 
-var (
+const (
 	// the default, signs all the inputs and outputs, protecting everything except the signature scripts against modification.
 	SigHashAll SigHash = 1
 	// signs all of the inputs but none of the outputs, allowing anyone to change where the satoshis are going unless other signatures using other signature hash flags protect the outputs
@@ -38,6 +38,10 @@ var (
 	SigHashForkId       SigHash = 0x40
 	SigHashAnyoneCanPay SigHash = 0x80
 )
+
+func NewDefaultSigHash() SigHash {
+	return SigHash(SigHashAll)
+}
 
 func NewSigHash(s uint32) SigHash {
 	return SigHash(s)
@@ -54,6 +58,11 @@ func (s SigHash) Has(flag SigHash) bool {
 
 func (s SigHash) HasBaseType(flag SigHash) bool {
 	return s&0x1F == flag
+}
+
+func (s SigHash) IsDefined() bool {
+	base := s & ^(SigHashForkId | SigHashAnyoneCanPay)
+	return base >= SigHashAll && base <= SigHashSingle
 }
 
 type SignatureVersion uint32
@@ -173,7 +182,7 @@ func (ts *TransactionSigner) CheckSequence(sequence uint32) error {
 }
 
 func (ts *TransactionSigner) computeHashPrevOuts(sighash SigHash) Hash {
-	if sighash.Has(SigHashAnyoneCanPay) {
+	if !sighash.Has(SigHashAnyoneCanPay) {
 		buffer := NewBuffer()
 		for _, input := range ts.Transaction.Inputs {
 			buffer.PutBytes(input.PrevOutput.Bytes())
@@ -186,7 +195,7 @@ func (ts *TransactionSigner) computeHashPrevOuts(sighash SigHash) Hash {
 }
 
 func (ts *TransactionSigner) computeHashSequence(sighash SigHash) Hash {
-	if sighash.Has(SigHashAll) && sighash.Has(SigHashAnyoneCanPay) {
+	if sighash.Has(SigHashAll) && !sighash.Has(SigHashAnyoneCanPay) {
 		buffer := NewBuffer()
 		for _, input := range ts.Transaction.Inputs {
 			buffer.PutUint32(input.Sequence)
@@ -331,7 +340,7 @@ func (ts *TransactionSigner) signatureHashOriginal(script *Script, sighash SigHa
 	return DHash256(append(tx.Bytes(), byte(sighash), byte(sighash>>8), byte(sighash>>16), byte(sighash>>24)))
 }
 
-func (ts *TransactionSigner) CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error {
+func (ts *TransactionSigner) CheckSignature(sig, pubkey []byte, script *Script, flag Flag, version SignatureVersion) error {
 	if len(sig) == 0 {
 		return ErrTransactionSignerEmptySignature
 	}
@@ -341,14 +350,15 @@ func (ts *TransactionSigner) CheckSignature(sig, pubkey []byte, script *Script, 
 
 	var hash Hash
 
-	switch version {
-	case SignatureVersionBase:
-		hash = ts.signatureHashOriginal(script, sighash)
-	case SignatureVersionWitnessV0:
-		hash = ts.signatureHashWitnessV0(script, sighash)
-	case SignatureVersionForkId:
-		hash = ts.signatureHashForkId(script, sighash)
-	}
+	// switch version {
+	// case SignatureVersionBase:
+	// 	hash = ts.signatureHashOriginal(script, sighash)
+	// case SignatureVersionWitnessV0:
+	// 	hash = ts.signatureHashWitnessV0(script, sighash)
+	// case SignatureVersionForkId:
+	// 	hash = ts.signatureHashForkId(script, sighash)
+	// }
+	hash = ts.SiagntureHash(script, sighash, flag)
 
 	pk := bcrypto.NewPublicKey(pubkey)
 	ok := pk.Verify(hash.Bytes(), sig)
@@ -357,4 +367,12 @@ func (ts *TransactionSigner) CheckSignature(sig, pubkey []byte, script *Script, 
 	}
 
 	return nil
+}
+
+func (ts *TransactionSigner) SiagntureHash(script *Script, sighash SigHash, flag Flag) Hash {
+	if sighash.Has(SigHashForkId) && flag.Has(ScriptEnableSigHashForkID) {
+		return ts.signatureHashForkId(script, sighash)
+	}
+
+	return ts.signatureHashOriginal(script, sighash)
 }

@@ -7,7 +7,7 @@ import (
 type Checker interface {
 	CheckLockTime(locktime uint32) error
 	CheckSequence(sequence uint32) error
-	CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error
+	CheckSignature(sig, pubkey []byte, script *Script, flag Flag, version SignatureVersion) error
 }
 
 type NoopChecker struct{}
@@ -15,7 +15,7 @@ type NoopChecker struct{}
 func NewNoopChecker() *NoopChecker                         { return &NoopChecker{} }
 func (n *NoopChecker) CheckLockTime(locktime uint32) error { return nil }
 func (n *NoopChecker) CheckSequence(sequence uint32) error { return nil }
-func (n *NoopChecker) CheckSignature(sig, pubkey []byte, script *Script, version SignatureVersion) error {
+func (n *NoopChecker) CheckSignature(sig, pubkey []byte, script *Script, flag Flag, version SignatureVersion) error {
 	return nil
 }
 
@@ -55,7 +55,14 @@ func CheckSignatureEncoding(sig []byte, flag Flag, sigver SignatureVersion) erro
 	}
 
 	if flag.Has(ScriptVerifyStrictEncoding) {
-		// TODO: check fork id
+		useForkId := sig[len(sig)-1]&byte(SigHashForkId) != 0
+		enableForkId := flag.Has(ScriptEnableSigHashForkID)
+		if !enableForkId && useForkId {
+			return ErrInterpreterIllegalForkId
+		}
+		if enableForkId && !useForkId {
+			return ErrInterpreterMustUseForkId
+		}
 	}
 
 	return nil
@@ -152,26 +159,29 @@ func isDefinedHashtypeSiganture(sigver SignatureVersion, sig []byte) bool {
 		return false
 	}
 
-	u := uint8(sig[len(sig)-1])
-	switch sigver {
-	case SignatureVersionForkId:
-		u = u & uint8(^(0x40|0x80)&0xFF)
-	default:
-		u = u & uint8(^0x80&0xFF)
-	}
+	sighash := NewSigHash(uint32(sig[len(sig)-1]))
 
-	switch u {
-	case 1:
-		fallthrough
-	case 2:
-		fallthrough
-	case 3:
-		return true
-	default:
-		return false
-	}
+	return sighash.IsDefined()
+	// u := uint8(sig[len(sig)-1])
+	// switch sigver {
+	// case SignatureVersionForkId:
+	// 	u = u & uint8(^(0x40|0x80)&0xFF)
+	// default:
+	// 	u = u & uint8(^0x80&0xFF)
+	// }
 
-	return false
+	// switch u {
+	// case 1:
+	// 	fallthrough
+	// case 2:
+	// 	fallthrough
+	// case 3:
+	// 	return true
+	// default:
+	// 	return false
+	// }
+
+	// return false
 }
 
 func isPubKey(pubkey []byte) bool {

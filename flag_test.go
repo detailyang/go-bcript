@@ -3,7 +3,6 @@ package bscript
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/detailyang/go-bcore"
@@ -190,7 +189,6 @@ func (tb *TestBuilder) EditPush(pos int, hexin, hexout string) *TestBuilder {
 
 	tb.push = append(left, dataout...)
 	tb.push = append(tb.push, right...)
-	fmt.Println(hex.EncodeToString(tb.push))
 
 	return tb
 }
@@ -198,7 +196,7 @@ func (tb *TestBuilder) EditPush(pos int, hexin, hexout string) *TestBuilder {
 func (tb *TestBuilder) Add(script *Script) *TestBuilder {
 	tb.DoPush()
 	tb.spendTx.Inputs[0].ScriptSig = NewScriptFromBytes(tb.spendTx.Inputs[0].ScriptSig).
-		PushBytesWithOP(script.Bytes()).Bytes()
+		PushBytes(script.Bytes()).Bytes()
 	return tb
 }
 
@@ -220,14 +218,12 @@ func (tb *TestBuilder) PushSig(
 	sigHash SigHash,
 	nr, ns int,
 	amount uint64,
-	flags Flag,
+	flag Flag,
 ) *TestBuilder {
 	ts := NewTransactionSigner(tb.spendTx, 0, amount)
-	hash := ts.signatureHashOriginal(tb.script, sigHash)
+	hash := ts.SiagntureHash(tb.script, sigHash, flag)
 	sig := tb.DoSign(key, hash, nr, ns)
 	sig = append(sig, byte(sigHash))
-
-	fmt.Println("mysig", hex.EncodeToString(sig))
 
 	tb.DoPushBytes(sig)
 
@@ -333,8 +329,7 @@ func TestScriptFlag(t *testing.T) {
 	// pubkey2, _ := key1.GetPubkey()
 	pubkey2c, _ := key2c.GetPubkey()
 
-	var flag Flag
-	flag.Enable(ScriptEnableSigHashForkID)
+	flag := ScriptEnableSigHashForkID
 
 	tests := make([]*TestBuilder, 0, 512)
 
@@ -387,7 +382,7 @@ func TestScriptFlag(t *testing.T) {
 		0,
 		false,
 		0,
-	).PushSig(key1, SigHashAll.Enable(SigHashAnyoneCanPay), 32, 32, 0, flag))
+	).PushSig(key1, SigHashAll|SigHashAnyoneCanPay, 32, 32, 0, flag))
 
 	tests = append(tests, NewTestBuilder(
 		NewScript().PushBytesWithOP(pubkey1.Bytes()).
@@ -396,7 +391,7 @@ func TestScriptFlag(t *testing.T) {
 		0,
 		false,
 		0,
-	).PushSig(key1, SigHashAll.Enable(SigHashAnyoneCanPay), 32, 32, 0, flag).
+	).PushSig(key1, SigHashAll|SigHashAnyoneCanPay, 32, 32, 0, flag).
 		EditPush(70, "81", "01").ScriptError(ErrInterpreterEvalFalse))
 
 	tests = append(tests, NewTestBuilder(
@@ -463,6 +458,7 @@ func TestScriptFlag(t *testing.T) {
 	).Num(0).
 		PushSig(key0, SigHashAll, 32, 32, 0, flag).
 		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		Num(0).
 		ScriptError(ErrInterpreterEvalFalse))
 
 	tests = append(tests, NewTestBuilder(
@@ -840,22 +836,22 @@ func TestScriptFlag(t *testing.T) {
 		0,
 	).Num(0).PushSig(key1, SigHashAll, 33, 32, 0, flag).EditPush(1, "45022100", "440220").Num(0))
 
-	// tests = append(tests, NewTestBuilder(
-	// 	NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
-	// 	"P2PK with multi-byte hashtype, without DERSIG",
-	// 	0,
-	// 	false,
-	// 	0,
-	// ).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101"))
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with multi-byte hashtype, without DERSIG",
+		0,
+		false,
+		0,
+	).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101"))
 
-	// tests = append(tests, NewTestBuilder(
-	// 	NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
-	// 	"P2PK with multi-byte hashtype, with DERSIG",
-	// 	ScriptVerifyDERSignatures,
-	// 	false,
-	// 	0,
-	// ).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101").ScriptError(
-	// 	ErrInterpreterBadSignatureDer))
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with multi-byte hashtype, with DERSIG",
+		ScriptVerifyDERSignatures,
+		false,
+		0,
+	).Num(0).PushSig(key2, SigHashAll, 32, 32, 0, flag).EditPush(70, "01", "0101").ScriptError(
+		ErrInterpreterBadSignatureDer))
 
 	tests = append(tests, NewTestBuilder(
 		NewScript().PushBytesWithOP(pubkey2c.Bytes()).PushOPCode(OP_CHECKSIG),
@@ -1087,9 +1083,149 @@ func TestScriptFlag(t *testing.T) {
 		PushSig(key1, SigHashAll, 32, 32, 0, flag).
 		Add(NewScript().PushOPCode(OP_DUP)))
 
-	tests[len(tests)-1].Test(t)
-	// for _, test := range tests {
-	// 	test.Test(t)
-	// }
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey1c.Bytes()).
+			PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"2-of-2 with two identical keys and sigs pushed using OP_DUP",
+		ScriptVerifySigPushOnly,
+		false,
+		0,
+	).Num(0).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_DUP)).ScriptError(ErrInterpreterSignaturePushOnly))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK) with non-push scriptSig but no P2SH or SIGPUSHONLY",
+		0,
+		true,
+		0,
+	).PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_NOP8)).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2PK with non-push scriptSig but with P2SH validation",
+		0,
+		false,
+		0,
+	).PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_NOP8)))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK) with non-push scriptSig but no SIGPUSHONLY",
+		ScriptVerifyP2SH,
+		true,
+		0,
+	).PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_NOP8)).PushRedeem().ScriptError(ErrInterpreterSignaturePushOnly))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushBytesWithOP(pubkey2c.Bytes()).
+			PushOPCode(OP_CHECKSIG),
+		"P2SH(P2PK) with non-push scriptSig but not P2SH",
+		ScriptVerifySigPushOnly,
+		true,
+		0,
+	).PushSig(key2, SigHashAll, 32, 32, 0, flag).
+		Add(NewScript().PushOPCode(OP_NOP8)).PushRedeem().ScriptError(ErrInterpreterSignaturePushOnly))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().PushOPCode(OP_2).
+			PushBytesWithOP(pubkey1c.Bytes()).PushBytesWithOP(pubkey1c.Bytes()).
+			PushOPCode(OP_2).PushOPCode(OP_CHECKMULTISIG),
+		"2-of-2 with two identical keys and sigs pushed",
+		ScriptVerifySigPushOnly,
+		false,
+		0,
+	).Num(0).PushSig(key1, SigHashAll, 32, 32, 0, flag).
+		PushSig(key1, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with unnecessary input but no CLEANSTACK",
+		ScriptVerifyP2SH,
+		false,
+		0,
+	).Num(11).PushSig(key0, SigHashAll, 32, 32, 0, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with unnecessary input but no CLEANSTACK",
+		ScriptVerifyP2SH|ScriptVerifyCleanStack,
+		false,
+		0,
+	).Num(11).PushSig(key0, SigHashAll, 32, 32, 0, flag).
+		ScriptError(ErrInterpreterCleanStack))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with unnecessary input but no CLEANSTACK",
+		ScriptVerifyP2SH,
+		true,
+		0,
+	).Num(11).PushSig(key0, SigHashAll, 32, 32, 0, flag).PushRedeem())
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with unnecessary input",
+		ScriptVerifyP2SH|ScriptVerifyCleanStack,
+		true,
+		0,
+	).Num(11).PushSig(key0, SigHashAll, 32, 32, 0, flag).PushRedeem().ScriptError(
+		ErrInterpreterCleanStack,
+	))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK with CLEANSTACK",
+		ScriptVerifyP2SH|ScriptVerifyCleanStack,
+		true,
+		0,
+	).PushSig(key0, SigHashAll, 32, 32, 0, flag).PushRedeem())
+
+	value := uint64(12345000000000)
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK FORKID",
+		ScriptEnableSigHashForkID,
+		false,
+		value,
+	).PushSig(key0, SigHashAll|SigHashForkId, 32, 32, value, flag))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK INVALID AMOUNT",
+		ScriptEnableSigHashForkID,
+		false,
+		value,
+	).PushSig(key0, SigHashAll|SigHashForkId, 32, 32, value+1, flag).ScriptError(ErrInterpreterEvalFalse))
+
+	tests = append(tests, NewTestBuilder(
+		NewScript().
+			PushBytesWithOP(pubkey0.Bytes()).PushOPCode(OP_CHECKSIG),
+		"P2PK INVALID FORKID",
+		ScriptVerifyStrictEncoding,
+		false,
+		value,
+	).PushSig(key0, SigHashAll|SigHashForkId, 32, 32, value, flag).ScriptError(ErrInterpreterIllegalForkId))
+
+	// tests[len(tests)-1].Test(t)
+	for _, test := range tests {
+		test.Test(t)
+	}
 
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -85,6 +86,7 @@ func TestBitwise(t *testing.T) {
 		}
 		s, err := run(code)
 		if err != nil {
+			fmt.Println(code)
 			t.Fatal(err)
 		}
 

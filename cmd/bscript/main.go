@@ -15,10 +15,7 @@ func main() {
 		panic(err)
 	}
 
-	var flag bscript.Flag
-	flag.Enable(bscript.ScriptSkipDisabledOPCode).
-		Enable(bscript.ScriptEnableTrace)
-
+	flag := bscript.ScriptSkipDisabledOPCode | bscript.ScriptEnableTrace
 	interpreter := bscript.NewInterpreter()
 	err = interpreter.Eval(script, flag, bscript.NewNoopChecker(), bscript.SignatureVersionBase)
 	if err != nil {

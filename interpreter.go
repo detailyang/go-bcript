@@ -50,6 +50,8 @@ var (
 	ErrInterpreterBadPubkey                          = errors.New("interpreter: bad public key")
 	ErrInterpreterEvalFalse                          = errors.New("interpreter: eval false")
 	ErrInterpreterSignatureNullFail                  = errors.New("interpreter: null fail siganture")
+	ErrInterpreterIllegalForkId                      = errors.New("interpreter: illegal forkid")
+	ErrInterpreterMustUseForkId                      = errors.New("interpreter: must use forkid")
 )
 
 const (
@@ -195,9 +197,6 @@ func VerifyScript(scriptSig, scriptPubkey *Script, scriptWitness ScriptWitness, 
 	stackCopy := NewStack()
 	hadWitness := false
 	cleanStack := flag.Has(ScriptVerifyCleanStack)
-
-	fmt.Println("unlocking", scriptSig.String())
-	fmt.Println("locking", scriptPubkey.String())
 
 	err := interpreter.Eval(scriptSig, flag, checker, sigversion)
 	if err != nil {

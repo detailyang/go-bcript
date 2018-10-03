@@ -149,6 +149,12 @@ func NewScriptFromString(src string) (*Script, error) {
 }
 
 func (s Script) IsPushOnly() bool {
+	tmp := s.Pos
+	defer func() {
+		s.Pos = tmp
+	}()
+
+	s.Pos = 0
 	for {
 		ins, err := s.Next()
 		if err != nil {
